@@ -1,0 +1,81 @@
+{
+  "window": {
+    "title": "Valtherion",
+    "width": 1280,
+    "height": 720,
+    "fullscreen": false,
+    "vsync": true,
+    "resizable": true
+  },
+
+  "performance": {
+    "targetFPS": 60,
+    "targetUPS": 60,
+    "maxFrameSkip": 5,
+    "enableThreading": true
+  },
+
+  "network": {
+    "enabled": true,
+    "serverIP": "localhost",
+    "serverPort": 25565,
+    "maxPlayers": 20,
+    "timeout": 30000,
+    "encryptionEnabled": false
+  },
+
+  "world": {
+    "seed": 123456789,
+    "chunkSize": 16,
+    "renderDistance": 12,
+    "simulationDistance": 8,
+    "generateStructures": true,
+    "difficulty": "NORMAL"
+  },
+
+  "audio": {
+    "masterVolume": 1.0,
+    "musicVolume": 0.8,
+    "soundVolume": 1.0,
+    "enable3DSound": true
+  },
+
+  "graphics": {
+    "renderShadows": true,
+    "renderParticles": true,
+    "renderFog": true,
+    "fogDensity": 0.01,
+    "fogColor": [0.5, 0.6, 0.8],
+    "gamma": 1.0,
+    "brightness": 1.0,
+    "textureQuality": "HIGH",
+    "shaderQuality": "MEDIUM"
+  },
+
+  "controls": {
+    "keyboard": {
+      "forward": "W",
+      "backward": "S",
+      "left": "A",
+      "right": "D",
+      "jump": "SPACE",
+      "sprint": "LEFT_SHIFT",
+      "crouch": "LEFT_CTRL",
+      "inventory": "E",
+      "attack": "LEFT_CLICK",
+      "use": "RIGHT_CLICK"
+    },
+    "mouse": {
+      "sensitivity": 0.5,
+      "invertYAxis": false
+    }
+  },
+
+  "language": "fr",
+  "debug": {
+    "enableLogs": true,
+    "logLevel": "INFO",
+    "showFPS": true,
+    "showCoordinates": true
+  }
+}
