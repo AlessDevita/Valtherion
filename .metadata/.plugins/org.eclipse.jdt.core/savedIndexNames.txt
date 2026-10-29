@@ -1,4 +1,0 @@
-INDEX VERSION 1.134+D:\User\Aless_Devita\LibFX\Mes Libs\Valtherion\.metadata\.plugins\org.eclipse.jdt.core
-762979416.index
-1067094681.index
-1865797976.index
