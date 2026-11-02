@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -72,6 +73,25 @@ public abstract class AbstractResourcePack implements IResourcePack {
     public void close() {
         // Redéfinition par les sous-classes si nécessaire.
     }
+
+    /**
+     * Liste toutes les ressources dans un domaine et un chemin donnés.
+     * Les sous-classes doivent implémenter {@code listResourcesInternal} pour fournir
+     * la logique spécifique au type de pack.
+     */
+    @Override
+    public Set<String> listResources(String domain, String path) {
+        return listResourcesInternal(domain, path);
+    }
+
+    /**
+     * Méthode abstraite pour lister les ressources, implémentée par chaque sous-classe.
+     *
+     * @param domain le namespace (ex: "valtherion")
+     * @param path le chemin relatif dans le domaine
+     * @return un ensemble de chemins de ressources
+     */
+    protected abstract Set<String> listResourcesInternal(String domain, String path);
 
     /** Construit le chemin relatif à partir d'un {@link ResourceLocation}. */
     protected static String toPath(ResourceLocation location) {

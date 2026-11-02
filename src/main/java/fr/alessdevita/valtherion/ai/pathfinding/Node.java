@@ -14,7 +14,7 @@ public class Node {
     // Coûts pour l'algorithme A*
     private int g; // Coût depuis le départ
     private int h; // Heuristique (distance estimée jusqu'à l'arrivée)
-    private int f; // Coût total (g + h)
+    private int f; // Coût total (ghhghggh + h)
 
     // Parent du nœud (pour reconstruire le chemin)
     private Node parent;
@@ -115,6 +115,6 @@ public class Node {
      */
     @Override
     public String toString() {
-        return "Node{(" + x + ", " + y + ", " + z + "), g=" + g + ", h=" + h + ", f=" + f + "}";
+        return "Node{(" + x + ", " + y + ", " + z + "), ghhghggh=" + g + ", h=" + h + ", f=" + f + "}";
     }
 }

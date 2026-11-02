@@ -10,9 +10,11 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -94,6 +96,57 @@ public final class FileResourcePack extends AbstractResourcePack {
             } catch (IOException ignored) {
             }
             this.fileSystem = null;
+        }
+    }
+
+    @Override
+    protected Set<String> listResourcesInternal(String domain, String path) {
+        Set<String> result = new HashSet<>();
+        if (domain == null) return Collections.unmodifiableSet(result);
+
+        try {
+            FileSystem fs = getFileSystem();
+            // Construire le chemin : assets/<domain>/<path>
+            String basePath = "assets/" + domain;
+            if (path != null && !path.isEmpty()) {
+                basePath += "/" + path;
+            }
+            Path directory = fs.getPath(basePath);
+            if (!Files.isDirectory(directory)) return Collections.unmodifiableSet(result);
+
+            // Le chemin de base du domaine pour calculer les chemins relatifs
+            String domainBasePath = "assets/" + domain;
+
+            // Parcourir récursivement
+            collectEntries(directory, domainBasePath, result);
+
+        } catch (IOException ignored) {
+        }
+
+        return Collections.unmodifiableSet(result);
+    }
+
+    /**
+     * Collecte les chemins relatifs de tous les fichiers dans un dossier du ZIP.
+     */
+    private void collectEntries(Path directory, String domainBasePath, Set<String> result) throws IOException {
+        try (var stream = Files.list(directory)) {
+            List<Path> entries = new ArrayList<>();
+            stream.forEach(entries::add);
+
+            for (Path entry : entries) {
+                if (Files.isDirectory(entry)) {
+                    collectEntries(entry, domainBasePath, result);
+                } else if (Files.isRegularFile(entry)) {
+                    // Calculer le chemin relatif depuis assets/<domain>/
+                    String fullPath = entry.toString().replace('\\', '/');
+                    int prefixLength = domainBasePath.length() + 1;
+                    if (fullPath.length() > prefixLength) {
+                        String relPath = fullPath.substring(prefixLength);
+                        result.add(relPath);
+                    }
+                }
+            }
         }
     }
 }

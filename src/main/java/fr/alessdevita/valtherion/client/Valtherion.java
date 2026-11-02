@@ -42,6 +42,11 @@ import fr.alessdevita.valtherion.client.renderer.ItemRenderer;
 import fr.alessdevita.valtherion.client.renderer.RenderGlobal;
 import fr.alessdevita.valtherion.client.renderer.entity.RenderManager;
 import fr.alessdevita.valtherion.client.renderer.texture.TextureManager;
+import fr.alessdevita.valtherion.client.resources.DefaultResourcePackFromClasspath;
+import fr.alessdevita.valtherion.client.resources.FallbackResourceManager;
+import fr.alessdevita.valtherion.client.resources.FileResourcePack;
+import fr.alessdevita.valtherion.client.resources.FolderResourcePack;
+import fr.alessdevita.valtherion.client.resources.ResourceLoader;
 import fr.alessdevita.valtherion.client.resources.ResourcePackRepository;
 import fr.alessdevita.valtherion.client.resources.SkinManager;
 import fr.alessdevita.valtherion.client.settings.GameSettings;
@@ -60,8 +65,6 @@ import fr.alessdevita.valtherion.network.play.client.C16PacketClientStatus;
 import fr.alessdevita.valtherion.profiler.IPlayerUsage;
 import fr.alessdevita.valtherion.profiler.PlayerUsageSnooper;
 import fr.alessdevita.valtherion.server.integrated.IntegratedServer;
-import fr.alessdevita.valtherion.stats.AchievementList;
-import fr.alessdevita.valtherion.stats.IStatStringFormat;
 import fr.alessdevita.valtherion.stats.StatFileWriter;
 import fr.alessdevita.valtherion.utils.MovingObjectPosition;
 import fr.alessdevita.valtherion.utils.ReportedException;
@@ -72,6 +75,13 @@ import fr.alessdevita.valtherion.world.chunk.storage.AnvilSaveConverter;
 import fr.alessdevita.valtherion.world.storage.ISaveFormat;
 import fr.alessdevita.valtherion.world.storage.ISaveHandler;
 import fr.alessdevita.valtherion.world.storage.WorldInfo;
+import fr.devita.valtherion.authlib.GameProfile;
+import fr.devita.valtherion.authlib.UserType;
+import fr.devita.valtherion.authlib.ValtherionCredentials;
+import fr.devita.valtherion.authlib.session.SessionService;
+import fr.devita.valtherion.authlib.session.SessionToken;
+import fr.devita.valtherion.authlib.yggdrasil.YggdrasilAuthenticationService;
+import fr.devita.valtherion.authlib.yggdrasil.YggdrasilUserAuthentication;
 import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
@@ -95,7 +105,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  */
 public class Valtherion implements IPlayerUsage {
     private static final Logger logger = LoggerFactory.getLogger(Valtherion.class);
-    private static final String LOCATION_LOGO = "textures/gui/title/devita.png";
+    private static final String LOCATION_LOGO = "assets/valtherion/textures/gui/title/devitastudios.png";
     public static final boolean isRunningOnMac = Util.getOSType() == Util.EnumOS.OSX;
 
     /** Preallocation de 10 Mio pour garantir une taille de tas raisonnable. */
@@ -207,8 +217,18 @@ public class Valtherion implements IPlayerUsage {
     private SoundHandler mcSoundHandler;
     private MusicTicker mcMusicTicker;
     private SkinManager skinManager;
+    /** Gestionnaire de ressources avec repli pour les packs de ressources. */
+    private FallbackResourceManager fallbackResourceManager;
     /** Emplacement de la texture du logo de chargement. */
     private String logoTextureLocation; // String : TextureManager.bindTexture(String) dans ce projet
+    /** Service d'authentification VAuthLib. */
+    private YggdrasilAuthenticationService authenticationService;
+    /** Service de session VAuthLib. */
+    private SessionService sessionService;
+    /** Profil du joueur authentifié via VAuthLib. */
+    private GameProfile authenticatedProfile;
+    /** Authentification utilisateur VAuthLib. */
+    private YggdrasilUserAuthentication userAuthentication;
     private final Queue scheduledTasks = Queues.newArrayDeque();
     private final Thread clientThread = Thread.currentThread();
 
@@ -239,6 +259,13 @@ public class Valtherion implements IPlayerUsage {
         this.session = sessionIn;
         logger.info("Setting user: " + sessionIn.getUsername());
         logger.info("(Session ID is " + sessionIn.getSessionID() + ")");
+
+        // Initialiser le service d'authentification VAuthLib
+        this.authenticationService = new YggdrasilAuthenticationService("https://auth.valtherion.fr");
+        this.sessionService = this.authenticationService.createSessionService();
+        this.userAuthentication = this.authenticationService.createUserAuthentication(UserType.JOUEUR);
+        logger.info("VAuthLib initialisé avec le service d'authentification");
+
         this.isDemo = isDemoIn;
         this.displayWidth = widthIn;
         this.displayHeight = heightIn;
@@ -316,6 +343,7 @@ public class Valtherion implements IPlayerUsage {
      */
     private void startGame()
     {
+        logger.info("=== DÉBUT startGame() ===");
         // --- Initialisation GLFW ---
         GLFWErrorCallback.createPrint(System.err).set();
 
@@ -323,6 +351,7 @@ public class Valtherion implements IPlayerUsage {
         {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
+        logger.info("GLFW initialisé");
 
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -377,7 +406,9 @@ public class Valtherion implements IPlayerUsage {
         glfwMakeContextCurrent(this.window);
         glfwSwapInterval(0); // vsync gere plus bas
         glfwShowWindow(this.window);
+        logger.info("Fenêtre créée et affichée: 0x{}", Long.toHexString(this.window));
         GL.createCapabilities(); // equivalent GLContext.createCapabilities()
+        logger.info("Capabilities OpenGL créées");
 
         // Icone de fenetre
         try
@@ -399,6 +430,16 @@ public class Valtherion implements IPlayerUsage {
         // --- Rattachement des callbacks clavier/souris ---
         this.setupCallbacks();
 
+        // Mettre à jour les dimensions réelles du framebuffer avant d'afficher le menu
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            java.nio.IntBuffer fbWidth = stack.mallocInt(1);
+            java.nio.IntBuffer fbHeight = stack.mallocInt(1);
+            glfwGetFramebufferSize(this.window, fbWidth, fbHeight);
+            if (fbWidth.get(0) > 0 && fbHeight.get(0) > 0) {
+                this.resize(fbWidth.get(0), fbHeight.get(0));
+            }
+        }
+
         // TODO: OpenGlHelper.initializeTextures() n'existe pas encore : init textures Valtherion ici
 
         // Framebuffer(int, int) dans ce projet (pas de flag depth)
@@ -408,18 +449,46 @@ public class Valtherion implements IPlayerUsage {
         // TODO: guiAchievement (toast) une fois GuiAchievement branche sur le Gui de base
         this.saveLoader = new AnvilSaveConverter(new File(this.mcDataDir, "saves"));
         this.mcResourcePackRepository = null; // TODO: ResourcePackRepository(fileResourcepacks, defaultPack, gameSettings)
-        this.renderEngine = new TextureManager(); // TODO: passer l'IResourceManager au TextureManager
+
+        // Initialiser le gestionnaire de ressources avec repli
+        this.fallbackResourceManager = new FallbackResourceManager();
+
+        // Pack par défaut : charge les ressources depuis le classpath (src/main/resources/assets/)
+        this.fallbackResourceManager.addResourcePack(new DefaultResourcePackFromClasspath());
+
+        // Packs de ressources depuis le dossier resourcepacks (si présent)
+        if (this.fileResourcepacks != null && this.fileResourcepacks.isDirectory()) {
+            File[] packDirs = this.fileResourcepacks.listFiles(File::isDirectory);
+            if (packDirs != null) {
+                for (File packDir : packDirs) {
+                    this.fallbackResourceManager.addResourcePack(new FolderResourcePack(packDir));
+                }
+            }
+            File[] packFiles = this.fileResourcepacks.listFiles((dir, name) -> name.endsWith(".zip") || name.endsWith(".jar"));
+            if (packFiles != null) {
+                for (File packFile : packFiles) {
+                    this.fallbackResourceManager.addResourcePack(new FileResourcePack(packFile));
+                }
+            }
+        }
+
+        // Passer le gestionnaire de ressources au TextureManager
+        this.renderEngine = new TextureManager(this.fallbackResourceManager);
         this.skinManager = new SkinManager();    // TODO: passer (renderEngine, dossier skins)
-        this.loadScreen();
+
+        // Charger les ressources
+        ResourceLoader resourceLoader = new ResourceLoader(this.fallbackResourceManager);
+        resourceLoader.loadAllResources();
+
+        // Initialiser les composants du client avant le loading screen animé
         this.mcSoundHandler = new SoundHandler(); // TODO: passer (resourceManager, gameSettings)
         this.mcMusicTicker = new MusicTicker();   // TODO: passer le client
-        // FontRenderer avec un chemin de texture en String dans ce projet
         this.fontRenderer = new FontRenderer(this.gameSettings, "textures/font/ascii.png", this.renderEngine, false);
-        // TODO: flag unicode/bidi une fois LanguageManager implemente
-
+        this.fontRenderer.init();
         RenderManager.instance.itemRenderer = new ItemRenderer(this);
         this.entityRenderer = new EntityRenderer(this);
         this.mouseHelper = new MouseHelper(this.window);
+
         this.checkGLError("Pre startup");
         glEnable(GL_TEXTURE_2D);
         glShadeModel(GL_SMOOTH);
@@ -433,21 +502,27 @@ public class Valtherion implements IPlayerUsage {
         glLoadIdentity();
         glMatrixMode(GL_MODELVIEW);
         this.checkGLError("Startup");
+
         this.renderGlobal = new RenderGlobal(this);
         glViewport(0, 0, this.displayWidth, this.displayHeight);
         this.effectRenderer = new EffectRenderer(this.theWorld, this.renderEngine);
         this.checkGLError("Post startup");
 
-        if (this.serverName != null)
-        {
-            this.displayGuiScreen(new GuiConnecting());
+        // Créer et démarrer le loading screen animé (dure 15 secondes)
+        logger.info("Création du LoadingScreenRenderer...");
+        logger.info("Fenêtre GLFW : 0x{}", Long.toHexString(this.window));
+        logger.info("Dimensions : {}x{}", this.displayWidth, this.displayHeight);
+        logger.info("FontRenderer : {}", (this.fontRenderer != null ? "OK" : "NULL"));
+        logger.info("TextureManager : {}", (this.renderEngine != null ? "OK" : "NULL"));
+        
+        try {
+            this.loadingScreen = new LoadingScreenRenderer(this, this.window, this.displayWidth, this.displayHeight);
+            logger.info("LoadingScreenRenderer créé, appel de startLoadingScreen()...");
+            this.loadingScreen.startLoadingScreen();
+            logger.info("startLoadingScreen() terminé avec succès");
+        } catch (Exception e) {
+            logger.error("ERREUR dans startLoadingScreen(): {}", e.getMessage(), e);
         }
-        else
-        {
-            this.displayGuiScreen(new GuiMainMenu());
-        }
-
-        this.loadingScreen = new LoadingScreenRenderer(this, this.window, this.displayWidth, this.displayHeight);
 
         if (this.gameSettings.fullScreen && !this.fullscreen)
         {
@@ -456,6 +531,10 @@ public class Valtherion implements IPlayerUsage {
 
         // VSync : GLFW utilise glfwSwapInterval(1/0) au lieu de Display.setVSyncEnabled
         glfwSwapInterval(this.gameSettings.enableVsync ? 1 : 0);
+
+        // Afficher le menu principal après le loading screen
+        logger.info("Affichage du menu principal...");
+        this.displayGuiScreen((Gui) null);
     }
 
     /**
@@ -526,7 +605,7 @@ public class Valtherion implements IPlayerUsage {
     }
 
     /**
-     * Affiche l'ecran de chargement (fond degrade sombre + logo).
+     * Affiche l'ecran de chargement (fond noir + logo DEVITA STUDIOS texture).
      */
     private void loadScreen()
     {
@@ -543,27 +622,55 @@ public class Valtherion implements IPlayerUsage {
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_TEXTURE_2D);
 
-        // Fond degrade sombre "Valtherion" (noir/rouge fonce), dessine en GL direct
+        // Fond noir DEVITA STUDIOS
         glDisable(GL_TEXTURE_2D);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBegin(GL_QUADS);
-        glColor4f(0.06F, 0.0F, 0.0F, 1.0F);
+        glColor4f(0.0F, 0.0F, 0.0F, 1.0F);
         glVertex2f(0.0F, (float) scaledRes.getScaledHeight());
-        glColor4f(0.10F, 0.0F, 0.0F, 1.0F);
+        glColor4f(0.0F, 0.0F, 0.0F, 1.0F);
         glVertex2f((float) scaledRes.getScaledWidth(), (float) scaledRes.getScaledHeight());
-        glColor4f(0.02F, 0.0F, 0.0F, 1.0F);
+        glColor4f(0.0F, 0.0F, 0.0F, 1.0F);
         glVertex2f((float) scaledRes.getScaledWidth(), 0.0F);
-        glColor4f(0.04F, 0.0F, 0.0F, 1.0F);
+        glColor4f(0.0F, 0.0F, 0.0F, 1.0F);
         glVertex2f(0.0F, 0.0F);
         glEnd();
         glDisable(GL_BLEND);
+
+        // Logo DEVITA STUDIOS depuis la texture
+        this.renderEngine.bindTexture(LOCATION_LOGO);
         glEnable(GL_TEXTURE_2D);
-
-        // TODO: logo de chargement : renderEngine.getDynamicTextureLocation("logo", new DynamicTexture(...))
-        //       une fois DynamicTexture(BufferedImage) supporte ; bindTexture prend un String dans ce projet.
-
         glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+
+        // Récupérer les dimensions de la texture
+        int texWidth = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH);
+        int texHeight = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT);
+
+        // Fallback si les dimensions ne sont pas disponibles
+        if (texWidth <= 0) texWidth = 400;
+        if (texHeight <= 0) texHeight = 150;
+
+        // Centrer le logo sur l'écran
+        int logoX = (scaledRes.getScaledWidth() - texWidth) / 2;
+        int logoY = (scaledRes.getScaledHeight() - texHeight) / 2 - 50;
+
+        glBegin(GL_QUADS);
+        // Bas-gauche
+        glTexCoord2f(0.0F, 0.0F);
+        glVertex2f(logoX, logoY + texHeight);
+        // Bas-droite
+        glTexCoord2f(1.0F, 0.0F);
+        glVertex2f(logoX + texWidth, logoY + texHeight);
+        // Haut-droite
+        glTexCoord2f(1.0F, 1.0F);
+        glVertex2f(logoX + texWidth, logoY);
+        // Haut-gauche
+        glTexCoord2f(0.0F, 1.0F);
+        glVertex2f(logoX, logoY);
+        glEnd();
+
+        glDisable(GL_TEXTURE_2D);
         glDisable(GL_LIGHTING);
         glDisable(GL_FOG);
         glFlush();
@@ -766,6 +873,9 @@ public class Valtherion implements IPlayerUsage {
             this.shutdown();
         }
 
+        // Traiter les événements souris/clavier et les propager aux GUI
+        this.runTick();
+
         if (this.isGamePaused && this.theWorld != null)
         {
             float f = this.timer.renderPartialTicks;
@@ -786,7 +896,16 @@ public class Valtherion implements IPlayerUsage {
         this.checkGLError("Pre render");
         this.mcSoundHandler.update(1.0F / 20.0F);
 
+        // Mettre à jour le viewport avec les dimensions actuelles
+        glViewport(0, 0, this.displayWidth, this.displayHeight);
+
+        // Réinitialiser les matrices pour chaque frame
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
         glPushMatrix();
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_TEXTURE_2D);
 
@@ -1231,7 +1350,6 @@ public class Valtherion implements IPlayerUsage {
             ((GuiScreen) this.currentScreen).setWorldAndResolution(this, scaledRes.getScaledWidth(), scaledRes.getScaledHeight());
         }
 
-        this.loadingScreen = new LoadingScreenRenderer(this, this.window, this.displayWidth, this.displayHeight);
         this.updateFramebufferSize();
     }
 
@@ -1922,12 +2040,33 @@ public class Valtherion implements IPlayerUsage {
     public void createWorld(String name, fr.alessdevita.valtherion.world.WorldType type,
                             String seed, fr.alessdevita.valtherion.client.gui.GuiCreateWorld.GameMode mode) {
         if (name == null || name.isBlank()) throw new IllegalArgumentException("Le monde doit avoir un nom");
-        long worldSeed = 0L;
+        long worldSeed = seed == null || seed.isBlank()
+                ? java.util.concurrent.ThreadLocalRandom.current().nextLong() : 0L;
         if (seed != null && !seed.isBlank()) {
             try { worldSeed = Long.parseLong(seed); } catch (NumberFormatException ignored) { worldSeed = seed.hashCode(); }
         }
-        launchIntegratedServer(name.trim(), name.trim(), new fr.alessdevita.valtherion.world.WorldSettings(
-                worldSeed, type, true, mode == fr.alessdevita.valtherion.client.gui.GuiCreateWorld.GameMode.HARDCORE));
+
+        this.loadWorld((WorldClient) null);
+        fr.alessdevita.valtherion.client.multiplayer.WorldClient world =
+                new fr.alessdevita.valtherion.client.multiplayer.WorldClient();
+        world.setName(name.trim());
+        world.setProvider(new fr.alessdevita.valtherion.world.WorldProviderSurface());
+        fr.alessdevita.valtherion.world.WorldGenerator generator =
+                new fr.alessdevita.valtherion.world.WorldGenerator(world, worldSeed);
+        world.setWorldGenerator(generator);
+        generator.generateInitialChunks(2);
+
+        this.loadWorld(world);
+
+        int spawnY = generator.getMaxHeight() - 1;
+        while (spawnY > 0 && !world.isBlockSolid(0, spawnY, 0)) {
+            spawnY--;
+        }
+        if (this.thePlayer != null) {
+            this.thePlayer.setPosition(0.5D, spawnY + 1.0D, 0.5D);
+        }
+        this.playerController.setCreativeMode(mode == fr.alessdevita.valtherion.client.gui.GuiCreateWorld.GameMode.CREATIVE);
+        this.displayGuiScreen((Gui) null);
     }
 
     public static boolean isGuiEnabled()
@@ -2058,6 +2197,150 @@ public class Valtherion implements IPlayerUsage {
         return this.userProperties;
     }
 
+    // ------------------------------------------------------------------------
+    // VAuthLib integration
+    // ------------------------------------------------------------------------
+
+    /**
+     * Retourne le service d'authentification VAuthLib.
+     *
+     * @return le YggdrasilAuthenticationService
+     */
+    public YggdrasilAuthenticationService getAuthenticationService()
+    {
+        return this.authenticationService;
+    }
+
+    /**
+     * Retourne le service de session VAuthLib.
+     *
+     * @return le SessionService
+     */
+    public SessionService getSessionService()
+    {
+        return this.sessionService;
+    }
+
+    /**
+     * Retourne le profil du joueur authentifié via VAuthLib.
+     *
+     * @return le GameProfile ou null si non authentifié
+     */
+    public GameProfile getAuthenticatedProfile()
+    {
+        return this.authenticatedProfile;
+    }
+
+    /**
+     * Retourne l'authentification utilisateur VAuthLib.
+     *
+     * @return le YggdrasilUserAuthentication
+     */
+    public YggdrasilUserAuthentication getUserAuthentication()
+    {
+        return this.userAuthentication;
+    }
+
+    /**
+     * Authentifie un utilisateur avec VAuthLib.
+     * Cette méthode doit être appelée avant de rejoindre un serveur.
+     *
+     * @param username le nom d'utilisateur
+     * @param password le mot de passe
+     * @return true si l'authentification a réussi
+     */
+    public boolean authenticateUser(String username, String password)
+    {
+        if (username == null || username.isBlank())
+        {
+            logger.warn("Nom d'utilisateur vide, authentification ignorée");
+            return false;
+        }
+
+        try
+        {
+            ValtherionCredentials credentials = new ValtherionCredentials(username, password);
+            this.userAuthentication.logIn(credentials);
+            this.authenticatedProfile = this.userAuthentication.getAuthenticatedProfile();
+            logger.info("Utilisateur authentifié avec succès : {} (UUID: {})", 
+                    this.authenticatedProfile.getName(), this.authenticatedProfile.getId());
+            return true;
+        }
+        catch (Exception e)
+        {
+            logger.error("Échec de l'authentification pour '{}': {}", username, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Déconnecte l'utilisateur actuel via VAuthLib.
+     */
+    public void logoutUser()
+    {
+        if (this.userAuthentication != null)
+        {
+            this.userAuthentication.logOut();
+            this.authenticatedProfile = null;
+            logger.info("Utilisateur déconnecté");
+        }
+    }
+
+    /**
+     * Vérifie si le token de session est toujours valide.
+     *
+     * @return true si le token est valide
+     */
+    public boolean checkSessionToken()
+    {
+        if (this.userAuthentication == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return this.userAuthentication.checkToken();
+        }
+        catch (Exception e)
+        {
+            logger.warn("Erreur lors de la vérification du token: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Joint un serveur en utilisant VAuthLib pour valider la session.
+     *
+     * @param serverAddress l'adresse du serveur
+     * @return true si la validation a réussi
+     */
+    public boolean joinServerWithAuth(String serverAddress)
+    {
+        if (this.authenticatedProfile == null)
+        {
+            logger.warn("Aucun profil authentifié, impossible de rejoindre le serveur");
+            return false;
+        }
+
+        try
+        {
+            SessionToken sessionToken = SessionToken.random();
+            this.sessionService.joinServer(
+                    sessionToken, 
+                    this.authenticatedProfile, 
+                    serverAddress
+            );
+            logger.info("Session validée pour le serveur: {}", serverAddress);
+            return true;
+        }
+        catch (Exception e)
+        {
+            logger.error("Échec de la validation de session pour '{}': {}", serverAddress, e.getMessage());
+            return false;
+        }
+    }
+
     public Proxy getProxy()
     {
         return this.proxy;
@@ -2066,6 +2349,12 @@ public class Valtherion implements IPlayerUsage {
     public TextureManager getTextureManager()
     {
         return this.renderEngine;
+    }
+
+    /** Retourne le gestionnaire de ressources avec repli. */
+    public FallbackResourceManager getFallbackResourceManager()
+    {
+        return this.fallbackResourceManager;
     }
 
     public ISaveFormat getSaveFormat() { return this.saveLoader; }

@@ -78,6 +78,33 @@ public final class DefaultResourcePack extends AbstractResourcePack {
         return this.metadataSerializer.parseMetadata(json, sectionClass);
     }
 
+    @Override
+    protected Set<String> listResourcesInternal(String domain, String path) {
+        Set<String> result = new HashSet<>();
+        if (domain == null) return result;
+
+        // Le préfixe à chercher : assets/<domain>/<path>
+        String prefix = "assets/" + domain;
+        if (path != null && !path.isEmpty()) {
+            prefix += "/" + path;
+        }
+        // S'assurer que le préfixe se termine par / pour ne pas matcher partiellement
+        if (!prefix.endsWith("/")) {
+            prefix += "/";
+        }
+
+        for (String key : this.assetsMap.keySet()) {
+            if (key.startsWith(prefix)) {
+                // Extraire le chemin relatif depuis assets/<domain>/
+                String domainPrefix = "assets/" + domain + "/";
+                String relPath = key.substring(domainPrefix.length());
+                result.add(relPath);
+            }
+        }
+
+        return result;
+    }
+
     private static String extractDomain(String key) {
         if (key == null) return null;
         if (key.startsWith("assets/")) {

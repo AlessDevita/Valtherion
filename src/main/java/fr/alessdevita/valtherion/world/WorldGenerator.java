@@ -217,18 +217,26 @@ public class WorldGenerator {
      * Génère le monde initial.
      */
     public void generateInitialWorld() {
-        // Générer les chunks initiaux autour de l'origine
-        int renderDistance = 5; // Distance de rendu en chunks
-        for (int x = -renderDistance; x <= renderDistance; x++) {
-            for (int z = -renderDistance; z <= renderDistance; z++) {
-                generateChunk(x, z);
-            }
-        }
+        generateInitialChunks(5);
 
         // Générer le joueur initial
         generateInitialPlayer();
 
         System.out.println("Monde initial généré.");
+    }
+
+    /**
+     * Génère les chunks autour de l'origine sans créer de joueur serveur.
+     */
+    public void generateInitialChunks(int renderDistance) {
+        if (renderDistance < 0) {
+            throw new IllegalArgumentException("La distance de génération ne peut pas être négative");
+        }
+        for (int x = -renderDistance; x <= renderDistance; x++) {
+            for (int z = -renderDistance; z <= renderDistance; z++) {
+                generateChunk(x, z);
+            }
+        }
     }
 
     /**
@@ -333,9 +341,30 @@ public class WorldGenerator {
      * @return Valeur du bruit de Perlin.
      */
     private float generatePerlinNoise(float x, float z) {
-        // Implémentation simplifiée du bruit de Perlin
-        // Pour une implémentation complète, utilise une bibliothèque comme FastNoise ou JOML Noise
-        return random.nextFloat() * 2 - 1; // Valeur aléatoire entre -1 et 1
+        int x0 = (int) Math.floor(x);
+        int z0 = (int) Math.floor(z);
+        float localX = x - x0;
+        float localZ = z - z0;
+        localX = localX * localX * (3f - 2f * localX);
+        localZ = localZ * localZ * (3f - 2f * localZ);
+
+        float top = lerp(noiseAt(x0, z0), noiseAt(x0 + 1, z0), localX);
+        float bottom = lerp(noiseAt(x0, z0 + 1), noiseAt(x0 + 1, z0 + 1), localX);
+        return lerp(top, bottom, localZ);
+    }
+
+    private float noiseAt(int x, int z) {
+        long hash = seed ^ (long) x * 0x9E3779B97F4A7C15L ^ (long) z * 0xC2B2AE3D27D4EB4FL;
+        hash ^= hash >>> 30;
+        hash *= 0xBF58476D1CE4E5B9L;
+        hash ^= hash >>> 27;
+        hash *= 0x94D049BB133111EBL;
+        hash ^= hash >>> 31;
+        return ((hash >>> 40) / (float) 0xFFFFFF) * 2f - 1f;
+    }
+
+    private float lerp(float start, float end, float amount) {
+        return start + (end - start) * amount;
     }
 
     /**

@@ -1,5 +1,6 @@
 package fr.alessdevita.valtherion.client.renderer.texture;
 
+import fr.alessdevita.valtherion.client.resources.IResourceManager;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.image.BufferedImage;
@@ -13,13 +14,33 @@ import java.util.concurrent.atomic.AtomicLong;
 public class TextureManager implements Closeable {
     private final Map<String, ITextureObject> textures = new ConcurrentHashMap<>();
     private final AtomicLong dynamicTextureId = new AtomicLong();
+    private IResourceManager resourceManager;
+
+    /** Constructeur par défaut (utilise le classpath pour le chargement des textures). */
+    public TextureManager() {
+    }
+
+    /** Constructeur avec un gestionnaire de ressources pour charger les textures depuis les packs. */
+    public TextureManager(IResourceManager resourceManager) {
+        this.resourceManager = resourceManager;
+    }
+
+    /** Définit le gestionnaire de ressources à utiliser pour le chargement des textures. */
+    public void setResourceManager(IResourceManager resourceManager) {
+        this.resourceManager = resourceManager;
+    }
+
+    /** Retourne le gestionnaire de ressources associé. */
+    public IResourceManager getResourceManager() {
+        return this.resourceManager;
+    }
 
     public void bindTexture(String path) {
         if (path == null || path.isBlank()) {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
             return;
         }
-        ITextureObject texture = this.textures.computeIfAbsent(normalize(path), SimpleTexture::new);
+        ITextureObject texture = this.textures.computeIfAbsent(normalize(path), p -> this.resourceManager != null ? new SimpleTexture(p, this.resourceManager) : new SimpleTexture(p));
         try {
             if (!texture.isLoaded()) texture.loadTexture();
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture.getGlTextureId());

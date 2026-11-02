@@ -107,6 +107,8 @@ public class GuiOptions extends GuiScreen
     }
 
     private void drawCenteredString(Object fontRenderer, String screenTitle, int i, int i1, int i2) {
-
+        if (fontRenderer instanceof FontRenderer) {
+            ((FontRenderer) fontRenderer).drawCenteredString(screenTitle, i, i1, i2);
+        }
     }
 }

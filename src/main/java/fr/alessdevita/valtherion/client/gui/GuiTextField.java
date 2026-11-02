@@ -13,12 +13,12 @@ import fr.alessdevita.valtherion.utils.MathHelper;
 public class GuiTextField extends Gui
 {
     private final FontRenderer fontRenderer;
-    private final int xPosition;
-    private final int yPosition;
+    private int xPosition;
+    private int yPosition;
     /** Largeur en pixels. */
-    private final int width;
+    private int width;
     /** Hauteur en pixels. */
-    private final int height;
+    private int height;
     /** Texte saisi. */
     private String text = "";
     private int maxStringLength = 32;
@@ -60,6 +60,19 @@ public class GuiTextField extends Gui
         }
 
         this.setCursorPositionEnd();
+    }
+
+    public void setPosition(int x, int y, int width, int height)
+    {
+        this.xPosition = x;
+        this.yPosition = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    public void setEnableBackgroundDrawing(boolean enabled)
+    {
+        this.enableBackgroundDrawing = enabled;
     }
 
     public String getText()
@@ -265,7 +278,7 @@ public class GuiTextField extends Gui
         boolean cursorAtEnd = this.cursorPosition - this.lineScrollOffset < visible.length();
         String renderText = cursorAtEnd ? visible : visible + "_";
         int textX = this.enableBackgroundDrawing ? this.xPosition + 4 : this.xPosition;
-        int textY = (this.height - 8) / 2 + this.yPosition;
+        int textY = (this.height - 8) / 2 + this.yPosition + 5;
         this.fontRenderer.drawStringWithShadow(renderText, textX, textY, textColor);
 
         // Curseur clignotant (visible 1 tick sur 2)

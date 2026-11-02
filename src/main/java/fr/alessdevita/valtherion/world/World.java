@@ -63,6 +63,9 @@ public class World {
     // Générateur de monde
     private WorldGenerator worldGenerator;
 
+    // Provider du monde (définit les propriétés de la dimension)
+    private WorldProvider provider;
+
     // Liste des observateurs du monde
     private final List<WorldListener> listeners;
 
@@ -543,6 +546,15 @@ public class World {
 
     public void setWorldGenerator(WorldGenerator worldGenerator) {
         this.worldGenerator = worldGenerator;
+    }
+
+    public WorldProvider getProvider() {
+        return provider;
+    }
+
+    public void setProvider(WorldProvider provider) {
+        this.provider = provider;
+        provider.init(this);
     }
 
     // --- Interface pour les observateurs du monde ---

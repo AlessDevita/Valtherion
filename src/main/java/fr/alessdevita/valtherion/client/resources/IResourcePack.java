@@ -33,5 +33,16 @@ public interface IResourcePack {
      */
     <T extends IMetadataSection> T getPackMetadata(Class<T> sectionClass) throws IOException;
 
+    /**
+     * Liste toutes les ressources disponibles dans un domaine et un chemin donnés.
+     * Parcourt de manière récursive le contenu du pack et retourne les chemins relatifs
+     * des fichiers trouvés sous {@code assets/<domain>/<path>}.
+     *
+     * @param domain le namespace (ex: "valtherion")
+     * @param path le chemin relatif dans le domaine (ex: "textures/block/")
+     * @return un ensemble de chemins de ressources (sans le préfixe "assets/<domain>/")
+     */
+    Set<String> listResources(String domain, String path);
+
     void close();
 }

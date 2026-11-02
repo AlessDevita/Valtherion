@@ -2,17 +2,15 @@ package fr.alessdevita.valtherion.launch;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -41,11 +39,36 @@ public class ValtherionClient extends Application {
         stage.setHeight(720);
         stage.centerOnScreen();
 
-        Label loading = new Label("Chargement de Valtherion…");
-        loading.setTextFill(Color.WHITE);
-        loading.setFont(Font.font("System", FontWeight.BOLD, 24));
-        StackPane loadingPane = new StackPane(loading);
-        loadingPane.setStyle("-fx-background-color: #151923;");
+        // Fond noir DEVITA STUDIOS
+        StackPane loadingPane = new StackPane();
+        loadingPane.setStyle("-fx-background-color: #000000;");
+
+        // Charger la texture du logo DEVITA STUDIOS depuis les ressources
+        try {
+            java.io.InputStream logoStream = ValtherionClient.class.getResourceAsStream("/assets/valtherion/textures/gui/title/devitastudios.png");
+            if (logoStream != null) {
+                javafx.scene.image.Image logoImage = new javafx.scene.image.Image(logoStream);
+                ImageView logoView = new ImageView(logoImage);
+                // Centrer le logo
+                loadingPane.getChildren().add(logoView);
+                System.out.println("[ValtherionClient] Logo DEVITA STUDIOS chargé avec succès");
+            } else {
+                System.err.println("[ValtherionClient] Texture non trouvée : /assets/valtherion/textures/gui/title/devitastudios.png");
+                // Fallback : afficher le texte si la texture n'est pas trouvée
+                Label loading = new Label("Chargement de Valtherion…");
+                loading.setTextFill(Color.WHITE);
+                loading.setFont(Font.font("System", FontWeight.BOLD, 24));
+                loadingPane.getChildren().add(loading);
+            }
+        } catch (Exception e) {
+            System.err.println("[ValtherionClient] Erreur en chargeant le logo : " + e.getMessage());
+            // Fallback : afficher le texte en cas d'erreur
+            Label loading = new Label("Chargement de Valtherion…");
+            loading.setTextFill(Color.WHITE);
+            loading.setFont(Font.font("System", FontWeight.BOLD, 24));
+            loadingPane.getChildren().add(loading);
+        }
+
         stage.setScene(new Scene(loadingPane, 1280, 720));
         stage.show();
 
@@ -56,23 +79,8 @@ public class ValtherionClient extends Application {
                 Thread.currentThread().interrupt();
             }
 
-            Platform.runLater(() -> showMainMenu(stage));
+            Platform.runLater(() -> launchGame(stage));
         }, "valtherion-loading").start();
-    }
-
-    private void showMainMenu(Stage stage) {
-        Label title = new Label("VALTHERION");
-        title.setTextFill(Color.WHITE);
-        title.setFont(Font.font("System", FontWeight.EXTRA_BOLD, 42));
-        Button play = new Button("Jouer");
-        play.setOnAction(event -> launchGame(stage));
-        Button quit = new Button("Quitter");
-        quit.setOnAction(event -> Platform.exit());
-        VBox menu = new VBox(20, title, play, quit);
-        menu.setAlignment(Pos.CENTER);
-        menu.setStyle("-fx-background-color: #151923;");
-        stage.setScene(new Scene(menu, 1280, 720));
-        stage.show();
     }
 
     /**
@@ -112,7 +120,7 @@ public class ValtherionClient extends Application {
             Process process = new ProcessBuilder(command)
                     .directory(projectDirectory.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()))
+                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                     .start();
 
             launcherStage.hide();

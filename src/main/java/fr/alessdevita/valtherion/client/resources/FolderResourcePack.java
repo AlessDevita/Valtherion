@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Pack de ressources lu depuis un dossier sur disque.
@@ -66,5 +67,50 @@ public final class FolderResourcePack extends AbstractResourcePack {
     /** Le dossier racine du pack. */
     public File getRootFolder() {
         return this.rootFolder;
+    }
+
+    @Override
+    protected Set<String> listResourcesInternal(String domain, String path) {
+        Set<String> result = new HashSet<>();
+        if (domain == null || this.rootFolder == null) return Collections.unmodifiableSet(result);
+
+        // Construire le chemin du domaine : assets/<domain>/
+        File domainDir = new File(this.rootFolder, "assets/" + domain);
+        if (!domainDir.isDirectory()) return Collections.unmodifiableSet(result);
+
+        // Si un chemin est spécifié, on part de ce sous-dossier
+        File startDir = domainDir;
+        if (path != null && !path.isEmpty()) {
+            startDir = new File(domainDir, path);
+            if (!startDir.isDirectory()) return Collections.unmodifiableSet(result);
+        }
+
+        // Parcourir récursivement tous les fichiers
+        collectFiles(startDir, domainDir, result);
+
+        return Collections.unmodifiableSet(result);
+    }
+
+    /**
+     * Collecte les chemins relatifs de tous les fichiers dans un dossier.
+     * Les chemins sont relatifs au dossier du domaine (assets/<domain>/).
+     */
+    private void collectFiles(File directory, File domainDir, Set<String> result) {
+        File[] files = directory.listFiles();
+        if (files == null) return;
+
+        String domainDirPath = domainDir.getAbsolutePath();
+
+        for (File file : files) {
+            if (file.isDirectory()) {
+                collectFiles(file, domainDir, result);
+            } else if (file.isFile()) {
+                // Calculer le chemin relatif depuis le dossier du domaine
+                String relPath = file.getAbsolutePath().substring(domainDirPath.length() + 1);
+                // Normaliser les séparateurs pour Windows
+                relPath = relPath.replace('\\', '/');
+                result.add(relPath);
+            }
+        }
     }
 }
