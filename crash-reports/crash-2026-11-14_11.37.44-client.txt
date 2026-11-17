@@ -1,0 +1,57 @@
+---- Minecraft Crash Report ----
+// 
+// WARNING: If you're reading this, it means the game crashed.
+// 
+
+Time: Sat Nov 14 11:37:44 CET 2026
+Description: Updating screen events
+
+
+Stacktrace:
+java.lang.NullPointerException: Cannot invoke "fr.alessdevita.valtherion.client.multiplayer.PlayerControllerMP.createClientPlayer(fr.alessdevita.valtherion.client.multiplayer.WorldClient, fr.alessdevita.valtherion.stats.StatFileWriter)" because "this.playerController" is null
+	at fr.alessdevita.valtherion.client.Valtherion.loadWorld(Valtherion.java:1916)
+	at fr.alessdevita.valtherion.client.Valtherion.loadWorld(Valtherion.java:1860)
+	at fr.alessdevita.valtherion.client.Valtherion.createWorld(Valtherion.java:2059)
+	at fr.alessdevita.valtherion.client.gui.GuiCreateWorld.actionPerformed(GuiCreateWorld.java:163)
+	at fr.alessdevita.valtherion.client.gui.GuiScreen.handleMouseInput(GuiScreen.java:118)
+	at fr.alessdevita.valtherion.client.gui.GuiCreateWorld.handleMouseInput(GuiCreateWorld.java:217)
+	at fr.alessdevita.valtherion.client.Valtherion.processGuiInput(Valtherion.java:1731)
+	at fr.alessdevita.valtherion.client.Valtherion.runTick(Valtherion.java:1429)
+	at fr.alessdevita.valtherion.client.Valtherion.runGameLoop(Valtherion.java:877)
+	at fr.alessdevita.valtherion.client.Valtherion.run(Valtherion.java:823)
+	at fr.alessdevita.valtherion.client.main.Main.lambda$main$0(Main.java:46)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@142bc554
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@4acbe2e1
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@56617a78
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@3cfa0068
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@76b173c6
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@63785b1b
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@3e174fb6
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@5282f15c
+
+Affected level:
+   Level name: <unknown>
+   All players: <none>
+   Chunk stats: <unknown>
+   Force-gamedid: <unknown>
+   Level seed: <unknown>
+   Level generator: <unknown>
+   Level generator settings: <none>

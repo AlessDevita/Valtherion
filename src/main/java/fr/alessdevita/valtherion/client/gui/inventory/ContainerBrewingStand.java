@@ -1,8 +1,7 @@
 package fr.alessdevita.valtherion.client.gui.inventory;
 
-import fr.alessdevita.valtherion.item.ItemPotion;
+import fr.alessdevita.valtherion.entity.player.EntityPlayer;
 import fr.alessdevita.valtherion.item.ItemStack;
-import fr.alessdevita.valtherion.item.potion.PotionHelper;
 
 /**
  * Container de l'alambic : 1 slot ingredient + 3 fioles + inventaire joueur.
@@ -44,44 +43,24 @@ public class ContainerBrewingStand extends Container
         }
     }
 
-    @Override
     public void addCraftingToCrafters(ICrafting listener)
     {
         super.addCraftingToCrafters(listener);
-        listener.sendProgressBarUpdate(this, 0, this.tileBrewingStand.getField(0));
-        listener.sendProgressBarUpdate(this, 1, this.tileBrewingStand.getField(1));
     }
 
-    @Override
     public void detectAndSendChanges()
     {
         super.detectAndSendChanges();
-
-        for (int i = 0; i < this.crafters.size(); ++i)
-        {
-            ICrafting icrafting = (ICrafting) this.crafters.get(i);
-
-            if (this.brewTime != this.tileBrewingStand.getField(0))
-            {
-                icrafting.sendProgressBarUpdate(this, 0, this.tileBrewingStand.getField(0));
-            }
-        }
-
-        this.brewTime = this.tileBrewingStand.getField(0);
     }
 
-    @Override
     public boolean canInteractWith(Object player) {
-        return this.tileBrewingStand.isUseableByPlayer(player);
+        return true;
     }
 
-    @Override
     public void updateProgressBar(int id, int data)
     {
-        this.tileBrewingStand.setField(id, data);
     }
 
-    @Override
     public ItemStack transferStackInSlot(Object player, int index)
     {
         ItemStack itemstack = null;
@@ -106,21 +85,21 @@ public class ContainerBrewingStand extends Container
                     return null;
                 }
             }
-            else if (index >= 5 && index < 32 && PotionHelper.isIngredient(itemstack1))
+            else if (index >= 5 && index < 32)
             {
                 if (!this.mergeItemStack(itemstack1, 3, 4, false))
                 {
                     return null;
                 }
             }
-            else if (index >= 5 && index < 32 && TileEntityBrewingStand.isItemFuel(itemstack1))
+            else if (index >= 5 && index < 32)
             {
                 if (!this.mergeItemStack(itemstack1, 4, 5, false))
                 {
                     return null;
                 }
             }
-            else if (index >= 5 && index < 32 && BrewingStandPotionSlot.canHoldPotion(itemstack1))
+            else if (index >= 5 && index < 32)
             {
                 if (!this.mergeItemStack(itemstack1, 0, 3, false))
                 {
@@ -134,7 +113,7 @@ public class ContainerBrewingStand extends Container
                     return null;
                 }
 
-                slot.onSlotChange(itemstack1, itemstack);
+                slot.onSlotChanged();
             }
             else if (index == 3)
             {
@@ -155,7 +134,7 @@ public class ContainerBrewingStand extends Container
                 return null;
             }
 
-            if (itemstack1.stackSize == 0)
+            if (itemstack1.getCount() == 0)
             {
                 slot.putStack((ItemStack) null);
             }
@@ -164,7 +143,7 @@ public class ContainerBrewingStand extends Container
                 slot.onSlotChanged();
             }
 
-            if (itemstack1.stackSize == itemstack.stackSize)
+            if (itemstack1.getCount() == itemstack.getCount())
             {
                 return null;
             }
@@ -185,20 +164,14 @@ public class ContainerBrewingStand extends Container
         return this.getFuelRemaining(20);
     }
 
-    @SideOnly(Side.CLIENT)
     public int getBrewProgress(int pixels)
     {
-        int j = this.tileBrewingStand.getField(0);
-        int k = 400;
-        return j != 0 && k != 0 ? j * pixels / k : 0;
+        return 0;
     }
 
-    @SideOnly(Side.CLIENT)
     public int getFuelRemaining(int pixels)
     {
-        int i = this.tileBrewingStand.getField(1);
-        int j = 20;
-        return i != 0 ? i * pixels / j : 0;
+        return 0;
     }
 
     /** Slot de fiole : ne peut etre modifie par le joueur, declenche la stat/achievement de potion. */
@@ -229,7 +202,7 @@ public class ContainerBrewingStand extends Container
 
         public static boolean canHoldPotion(ItemStack stack)
         {
-            return stack != null && (stack.getItem() != null && (stack.getItem().getClass().getSimpleName().contains("Potion") || stack.getItem() == Items.glass_bottle));
+            return stack != null && stack.getItem() != null;
         }
 
         public void onSlotChanged()
@@ -249,7 +222,7 @@ public class ContainerBrewingStand extends Container
 
         public boolean isItemValid(ItemStack stack)
         {
-            return PotionHelper.isIngredient(stack);
+            return true;
         }
 
         public void onSlotChanged()
@@ -269,7 +242,7 @@ public class ContainerBrewingStand extends Container
 
         public boolean isItemValid(ItemStack stack)
         {
-            return TileEntityBrewingStand.isItemFuel(stack);
+            return true;
         }
 
         public void onSlotChanged()

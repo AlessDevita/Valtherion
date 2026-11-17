@@ -1,0 +1,55 @@
+---- Minecraft Crash Report ----
+// 
+// WARNING: If you're reading this, it means the game crashed.
+// 
+
+Time: Sat Nov 14 11:14:16 CET 2026
+Description: Updating screen events
+
+
+Stacktrace:
+java.lang.NullPointerException: Cannot invoke "fr.alessdevita.valtherion.world.WorldGenerator.getSeed()" because the return value of "fr.alessdevita.valtherion.world.World.getWorldGenerator()" is null
+	at fr.alessdevita.valtherion.world.gen.structure.MapGenStructure.<init>(MapGenStructure.java:33)
+	at fr.alessdevita.valtherion.world.gen.structure.MapGenMineshaft.<init>(MapGenMineshaft.java:24)
+	at fr.alessdevita.valtherion.world.WorldGenerator.<init>(WorldGenerator.java:123)
+	at fr.alessdevita.valtherion.world.World.<init>(World.java:84)
+	at fr.alessdevita.valtherion.world.World.<init>(World.java:98)
+	at fr.alessdevita.valtherion.client.multiplayer.WorldClient.<init>(WorldClient.java:15)
+	at fr.alessdevita.valtherion.client.Valtherion.createWorld(Valtherion.java:2050)
+	at fr.alessdevita.valtherion.client.gui.GuiCreateWorld.actionPerformed(GuiCreateWorld.java:333)
+	at fr.alessdevita.valtherion.client.gui.GuiScreen.handleMouseInput(GuiScreen.java:118)
+	at fr.alessdevita.valtherion.client.gui.GuiCreateWorld.handleMouseInput(GuiCreateWorld.java:406)
+	at fr.alessdevita.valtherion.client.Valtherion.processGuiInput(Valtherion.java:1731)
+	at fr.alessdevita.valtherion.client.Valtherion.runTick(Valtherion.java:1429)
+	at fr.alessdevita.valtherion.client.Valtherion.runGameLoop(Valtherion.java:877)
+	at fr.alessdevita.valtherion.client.Valtherion.run(Valtherion.java:823)
+	at fr.alessdevita.valtherion.client.main.Main.lambda$main$0(Main.java:46)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@31cf9b13
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@767acde6
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@26585de8
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@74119b09
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@394b919b
+
+Stacktrace:
+fr.alessdevita.valtherion.crash.CrashReportCategory@19fe6ea9
+
+Affected level:
+   Level name: <unknown>
+   All players: <none>
+   Chunk stats: <unknown>
+   Force-gamedid: <unknown>
+   Level seed: <unknown>
+   Level generator: <unknown>
+   Level generator settings: <none>

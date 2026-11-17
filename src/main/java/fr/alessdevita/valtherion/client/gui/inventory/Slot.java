@@ -51,6 +51,17 @@ public class Slot
     /** Nombre max empilable dans ce slot (delegue a l'inventaire/item). */
     public int getSlotStackLimit(ItemStack stack)
     {
+        ItemStack current = this.getStack();
+        if (current != null && current == stack)
+        {
+            return Math.min(this.inventory.getInventoryStackLimit(), stack.getMaxStackSize());
+        }
+        return this.inventory.getInventoryStackLimit();
+    }
+
+    /** Nombre max empilable dans ce slot (sans stack specifique). */
+    public int getSlotStackLimit()
+    {
         return this.inventory.getInventoryStackLimit();
     }
 

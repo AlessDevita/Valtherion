@@ -25,6 +25,18 @@ public class ItemStack {
         return this.item;
     }
 
+    public int getCount() {
+        return this.stackSize;
+    }
+
+    public void setCount(int count) {
+        this.stackSize = count;
+    }
+
+    public int getMaxStackSize() {
+        return this.item != null ? this.item.getMaxStackSize() : 64;
+    }
+
     public void addEnchantment(GuiEnchantment.Enchantment selectedEnchantment) {
     }
 

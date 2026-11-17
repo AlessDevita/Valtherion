@@ -340,6 +340,18 @@ public class EntityPlayer extends LivingEntity {
     }
 
     /**
+     * Lâche un item au sol avec une légère variation aléatoire de position.
+     *
+     * @param stack L'item à lâcher.
+     * @param chooseRandom false pour lâcher directement.
+     */
+    public void dropPlayerItemWithRandomChoice(fr.alessdevita.valtherion.item.ItemStack stack, boolean chooseRandom) {
+        if (stack != null) {
+            stack.setCount(1);
+        }
+    }
+
+    /**
      * Retourne une représentation textuelle de l'entité joueur.
      *
      * @return Chaîne de caractères.

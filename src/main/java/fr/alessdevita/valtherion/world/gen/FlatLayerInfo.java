@@ -11,13 +11,18 @@ public class FlatLayerInfo {
     private final BlockType blockType;
     private final int startHeight;
 
+    private static int nextHeight = 0;
+
     /**
      * Crée une couche de blocs.
      * @param thickness Épaisseur de la couche en blocs
      * @param blockType Type de bloc
      */
     public FlatLayerInfo(int thickness, BlockType blockType) {
-        this(thickness, blockType, 0);
+        this.thickness = Math.max(1, thickness);
+        this.blockType = blockType != null ? blockType : BlockType.STONE;
+        this.startHeight = nextHeight;
+        nextHeight += this.thickness;
     }
 
     /**
@@ -30,6 +35,13 @@ public class FlatLayerInfo {
         this.thickness = Math.max(1, thickness);
         this.blockType = blockType != null ? blockType : BlockType.STONE;
         this.startHeight = startHeight;
+    }
+
+    /**
+     * Réinitialise le compteur de hauteur pour une nouvelle configuration.
+     */
+    public static void resetHeight() {
+        nextHeight = 0;
     }
 
     public int getThickness() {

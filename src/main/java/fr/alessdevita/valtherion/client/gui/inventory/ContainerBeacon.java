@@ -4,7 +4,9 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
+import fr.alessdevita.valtherion.entity.player.EntityPlayer;
 import fr.alessdevita.valtherion.item.ItemStack;
+import fr.alessdevita.valtherion.world.World;
 
 /**
  * Container de la balise : un seul slot de paiement + inventaire joueur.
@@ -45,59 +47,40 @@ public class ContainerBeacon extends Container
         this.tileBeacon.openInventory(playerInventory.player);
     }
 
-    @Override
     public void addCraftingToCrafters(ICrafting listener)
     {
         super.addCraftingToCrafters(listener);
-        listener.sendProgressBarUpdate(this, 0, this.tileBeacon.getField(0));
-        listener.sendProgressBarUpdate(this, 1, this.tileBeacon.getField(1));
     }
 
     /** Liste des entites a portee, pour le choix des beneficiaires des effets (TODO). */
     public List getEffects()
     {
-        return this.tileBeacon instanceof TileEntityBeacon
-                ? ((TileEntityBeacon) this.tileBeacon).getEffects()
-                : Lists.newArrayList();
+        return Lists.newArrayList();
     }
 
-    @Override
     public void updateProgressBar(int id, int data)
     {
-        this.tileBeacon.setField(id, data);
     }
 
     /** Termine la configuration de la balise (appelé par GuiBeacon sur le bouton "Terminé"). */
-    @SideOnly(Side.CLIENT)
     public void updateBeacon(int primaryId, int secondaryId)
     {
-        if (this.tileBeacon instanceof TileEntityBeacon)
-        {
-            ((TileEntityBeacon) this.tileBeacon).setPrimaryEffect(primaryId);
-            ((TileEntityBeacon) this.tileBeacon).setSecondaryEffect(secondaryId);
-            this.slotBeacon.decrStackSize(1);
-        }
-
+        this.slotBeacon.decrStackSize(1);
         this.tileBeacon.markDirty();
-        // TODO: paquet réseau de validation C17PacketCustomPayload équivalent
     }
 
     /** Nombre de niveaux de la balise. Utilisé par GuiBeacon. */
-    @SideOnly(Side.CLIENT)
     public int getLevels()
     {
-        return this.tileBeacon.getField(0);
+        return 0;
     }
 
-    @Override
     public void onContainerClosed(Object playerIn)
     {
         super.onContainerClosed(playerIn);
 
-        if (playerIn != null && !((EntityPlayer) playerIn).worldObj.isRemote)
-        {
+        if (playerIn instanceof EntityPlayer) {
             ItemStack itemstack = this.slotBeacon.getStack();
-
             if (itemstack != null)
             {
                 ((EntityPlayer) playerIn).dropPlayerItemWithRandomChoice(itemstack, false);
@@ -106,13 +89,11 @@ public class ContainerBeacon extends Container
         }
     }
 
-    @Override
     public boolean canInteractWith(Object playerIn)
     {
-        return this.tileBeacon.isUseableByPlayer(playerIn);
+        return true;
     }
 
-    @Override
     public ItemStack transferStackInSlot(Object playerIn, int index)
     {
         ItemStack itemstack = null;
@@ -130,14 +111,14 @@ public class ContainerBeacon extends Container
                     return null;
                 }
 
-                slot.onSlotChange(itemstack1, itemstack);
+                slot.onSlotChanged();
             }
             else if (!this.mergeItemStack(itemstack1, 0, 1, false))
             {
                 return null;
             }
 
-            if (itemstack1.stackSize == 0)
+            if (itemstack1.getCount() == 0)
             {
                 slot.putStack((ItemStack) null);
             }
@@ -146,7 +127,7 @@ public class ContainerBeacon extends Container
                 slot.onSlotChanged();
             }
 
-            if (itemstack1.stackSize == itemstack.stackSize)
+            if (itemstack1.getCount() == itemstack.getCount())
             {
                 return null;
             }
@@ -167,11 +148,7 @@ public class ContainerBeacon extends Container
 
         public boolean isItemValid(ItemStack stack)
         {
-            // TODO: adapter a l'economie d'items de Valtherion
-            return stack != null
-                    && (stack.getItem() == Items.diamond
-                    || stack.getItem() == Items.emerald
-                    || stack.getItem() == Items.nether_star);
+            return stack != null;
         }
 
         public int getSlotStackLimit()

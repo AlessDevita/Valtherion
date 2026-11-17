@@ -45,6 +45,9 @@ public class World {
     // État du monde (jour/nuit, météo, etc.)
     private WorldState state;
 
+    // Indique si le monde est côté client (true) ou serveur (false)
+    public boolean isRemote = false;
+
     public int getHeightAt(int x, int z) {
         return x;
     }

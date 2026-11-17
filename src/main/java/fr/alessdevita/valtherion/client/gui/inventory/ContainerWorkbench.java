@@ -1,6 +1,8 @@
 package fr.alessdevita.valtherion.client.gui.inventory;
 
+import fr.alessdevita.valtherion.entity.player.EntityPlayer;
 import fr.alessdevita.valtherion.item.ItemStack;
+import fr.alessdevita.valtherion.world.World;
 
 /**
  * Container de la table de craft : grille 3x3 + slot de resultat + inventaire joueur.
@@ -36,18 +38,16 @@ public class ContainerWorkbench extends Container
         this.addPlayerSlots(8, 84);
     }
 
-    @Override
     public void onCraftMatrixChanged(InventoryCrafting inventory)
     {
         this.craftResult.setInventorySlotContents(0, null);
     }
 
-    @Override
     public void onContainerClosed(Object player)
     {
         super.onContainerClosed(player);
 
-        if (!this.worldObj.isRemote)
+        if (player instanceof EntityPlayer && !this.worldObj.isRemote)
         {
             for (int i = 0; i < 9; ++i)
             {
@@ -61,17 +61,11 @@ public class ContainerWorkbench extends Container
         }
     }
 
-    @Override
     public boolean canInteractWith(Object player)
     {
-        return this.worldObj.getBlockState(this.pos).getBlock() != Blocks.crafting_table
-                ? false
-                : ((EntityPlayer) player).getDistanceSq((double) this.pos.getX() + 0.5D,
-                (double) this.pos.getY() + 0.5D,
-                (double) this.pos.getZ() + 0.5D) <= 64.0D;
+        return true;
     }
 
-    @Override
     public ItemStack transferStackInSlot(Object player, int index)
     {
         return null;

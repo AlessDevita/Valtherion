@@ -27,6 +27,7 @@ public class FlatGeneratorInfo {
     }
 
     private void initDefaults() {
+        FlatLayerInfo.resetHeight();
         // 4 blocs de bedrock
         layers.add(new FlatLayerInfo(4, BlockType.STONE));
         // 20 blocs de pierre

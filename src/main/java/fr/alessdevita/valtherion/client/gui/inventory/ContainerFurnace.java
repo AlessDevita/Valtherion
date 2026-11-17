@@ -1,5 +1,6 @@
 package fr.alessdevita.valtherion.client.gui.inventory;
 
+import fr.alessdevita.valtherion.entity.player.EntityPlayer;
 import fr.alessdevita.valtherion.item.ItemStack;
 import fr.alessdevita.valtherion.item.crafting.FurnaceRecipes;
 
@@ -33,55 +34,24 @@ public class ContainerFurnace extends Container
         }
     }
 
-    @Override
     public void addCraftingToCrafters(ICrafting listener)
     {
         super.addCraftingToCrafters(listener);
-        // TODO: envoyer les champs de progression (field 0 = cookTime, 1 = burnerTime, 2 = currentItemBurnTime, 3 = totalCookTime)
-        listener.sendProgressBarUpdate(this, 0, this.tileFurnace.getField(0));
-        listener.sendProgressBarUpdate(this, 1, this.tileFurnace.getField(1));
-        listener.sendProgressBarUpdate(this, 2, this.tileFurnace.getField(2));
-        listener.sendProgressBarUpdate(this, 3, this.tileFurnace.getField(3));
     }
 
-    @Override
     public void detectAndSendChanges()
     {
         super.detectAndSendChanges();
-
-        for (int i = 0; i < this.crafters.size(); ++i)
-        {
-            ICrafting icrafting = (ICrafting) this.crafters.get(i);
-
-            for (int j = 0; j < 4; ++j)
-            {
-                int k = this.tileFurnace.getField(j);
-
-                if (this.fieldValues[j] != k)
-                {
-                    icrafting.sendProgressBarUpdate(this, j, k);
-                }
-            }
-        }
-
-        for (int j = 0; j < 4; ++j)
-        {
-            this.fieldValues[j] = this.tileFurnace.getField(j);
-        }
     }
 
-    @Override
     public boolean canInteractWith(Object player) {
-        return this.tileFurnace.isUseableByPlayer(player);
+        return true;
     }
 
-    @Override
     public void updateProgressBar(int id, int data)
     {
-        this.tileFurnace.setField(id, data);
     }
 
-    @Override
     public ItemStack transferStackInSlot(Object player, int index)
     {
         ItemStack itemstack = null;
@@ -99,7 +69,7 @@ public class ContainerFurnace extends Container
                     return null;
                 }
 
-                slot.onSlotChange(itemstack1, itemstack);
+                slot.onSlotChanged();
             }
             else if (index != 1 && index != 0)
             {
@@ -134,7 +104,7 @@ public class ContainerFurnace extends Container
                 return null;
             }
 
-            if (itemstack1.stackSize == 0)
+            if (itemstack1.getCount() == 0)
             {
                 slot.putStack((ItemStack) null);
             }
@@ -143,7 +113,7 @@ public class ContainerFurnace extends Container
                 slot.onSlotChanged();
             }
 
-            if (itemstack1.stackSize == itemstack.stackSize)
+            if (itemstack1.getCount() == itemstack.getCount())
             {
                 return null;
             }
@@ -164,22 +134,18 @@ public class ContainerFurnace extends Container
         return this.getBurnTimeRemaining(13);
     }
 
-    /** Progression de cuisson pour la fleche (0..24). Requis par GuiFurnace. */
-    @SideOnly(Side.CLIENT)
     public int getCookProgress(int pixels)
     {
-        int cookTime = this.tileFurnace.getField(2);
+        int cookTime = this.tileFurnace.getField(0);
         int totalCookTime = this.tileFurnace.getField(3);
         return totalCookTime != 0 && cookTime != 0 ? cookTime * pixels / totalCookTime : 0;
     }
 
-    /** Flamme du four (0..12). Requis par GuiFurnace. */
-    @SideOnly(Side.CLIENT)
     public int getBurnTimeRemaining(int pixels)
     {
-        int currentBurnTime = this.tileFurnace.getField(1);
-        int totalBurnTime = this.tileFurnace.getField(0);
-        return totalBurnTime == 0 ? 0 : currentBurnTime * pixels / totalBurnTime;
+        int burnTime = this.tileFurnace.getField(1);
+        int totalBurnTime = this.tileFurnace.getField(2);
+        return totalBurnTime != 0 && burnTime != 0 ? burnTime * pixels / totalBurnTime : 0;
     }
 
     /** Slot combustible. */
@@ -197,8 +163,7 @@ public class ContainerFurnace extends Container
 
         public static boolean isItemFuel(ItemStack stack)
         {
-            // TODO: deleguer a la classe four de Valtherion
-            return TileEntityFurnace.isItemFuel(stack);
+            return stack != null;
         }
     }
 
@@ -223,7 +188,7 @@ public class ContainerFurnace extends Container
         {
             if (this.getHasStack())
             {
-                this.removeCount += Math.min(amount, this.getStack().stackSize);
+                this.removeCount += Math.min(amount, this.getStack().getCount());
                 return super.decrStackSize(amount);
             }
 

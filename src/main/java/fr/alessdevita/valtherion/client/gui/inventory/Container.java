@@ -120,7 +120,70 @@ public abstract class Container
 
     protected boolean mergeItemStack(ItemStack stack, int start, int end, boolean reverse)
     {
-        return false;
+        if (stack == null || stack.getCount() == 0)
+        {
+            return false;
+        }
+
+        int direction = reverse ? -1 : 1;
+        boolean merged = false;
+
+        for (int i = 0; i < this.inventorySlots.size(); ++i)
+        {
+            int slotIndex = reverse ? end - 1 + i : start + i;
+            if (slotIndex < start || slotIndex >= end)
+            {
+                continue;
+            }
+
+            Slot slot = this.inventorySlots.get(slotIndex);
+            ItemStack slotStack = slot.getStack();
+
+            if (slotStack != null)
+            {
+                int maxStack = slot.getSlotStackLimit();
+                if (slotStack.getCount() < maxStack && slotStack.getCount() < slotStack.getMaxStackSize())
+                {
+                    int space = maxStack - slotStack.getCount();
+                    if (space > stack.getCount())
+                    {
+                        space = stack.getCount();
+                    }
+
+                    stack.setCount(stack.getCount() - space);
+                    slotStack.setCount(slotStack.getCount() + space);
+                    slot.onSlotChanged();
+                    merged = true;
+
+                    if (stack.getCount() == 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (slot.isItemValid(stack))
+            {
+                int maxStack = slot.getSlotStackLimit();
+                if (maxStack < stack.getCount())
+                {
+                    ItemStack copy = stack.copy();
+                    copy.setCount(maxStack);
+                    stack.setCount(stack.getCount() - maxStack);
+                    slot.putStack(copy);
+                    slot.onSlotChanged();
+                    merged = true;
+                }
+                else
+                {
+                    slot.putStack(stack);
+                    slot.onSlotChanged();
+                    merged = true;
+                    break;
+                }
+            }
+        }
+
+        return merged;
     }
 
     public void updateProgressBar(int id, int data)

@@ -21,12 +21,15 @@ public class ChunkProviderEnd {
         // L'île centrale est au chunk (0, 0)
         if (x == 0 && z == 0) {
             generateIsland(chunk);
+        } else {
+            // Générer des îles flottantes aléatoires pour les autres chunks
+            generateFloatingIslands(chunk);
         }
 
         return chunk;
     }
 
-    private void generateChunk(Chunk chunk) {
+    private void generateFloatingIslands(Chunk chunk) {
         // Générer des îles flottantes aléatoires
         for (int lx = 0; lx < Chunk.SIZE; lx++) {
             for (int lz = 0; lz < Chunk.SIZE; lz++) {

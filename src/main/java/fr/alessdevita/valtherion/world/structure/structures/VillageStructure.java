@@ -102,12 +102,7 @@ public class VillageStructure extends Structure {
      * @param type Type de bloc
      */
     private void placeBlock(World world, int x, int y, int z, BlockType type) {
-        Block block = new Block(type) {
-            @Override
-            public void update(float deltaTime) {
-            }
-        };
-        // TODO: Implémenter le placement du bloc dans le monde
+        world.setBlock(x, y, z, type);
     }
 
     /**

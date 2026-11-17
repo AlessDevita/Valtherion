@@ -52,6 +52,13 @@ public abstract class AbstractClientPlayer extends EntityLivingBase {
     // Accélération du joueur
     protected Vector3f acceleration;
 
+    // Rotation du joueur (yaw = rotation horizontale, pitch = rotation verticale)
+    protected float rotationYaw;
+    protected float rotationPitch;
+
+    // Sensibilité de la souris
+    protected float mouseSensitivity;
+
     /**
      * Constructeur de la classe abstraite AbstractClientPlayer.
      * @param id ID de l'entité.
@@ -74,6 +81,9 @@ public abstract class AbstractClientPlayer extends EntityLivingBase {
         this.isCreativeMode = false;
         this.velocity = new Vector3f();
         this.acceleration = new Vector3f();
+        this.rotationYaw = 0.0f;
+        this.rotationPitch = 0.0f;
+        this.mouseSensitivity = 0.15f;
     }
 
     /**
@@ -294,6 +304,43 @@ public abstract class AbstractClientPlayer extends EntityLivingBase {
 
     public void setAcceleration(Vector3f acceleration) {
         this.acceleration = acceleration;
+    }
+
+    public float getRotationYaw() {
+        return this.rotationYaw;
+    }
+
+    public void setRotationYaw(float yaw) {
+        this.rotationYaw = yaw;
+    }
+
+    public float getRotationPitch() {
+        return this.rotationPitch;
+    }
+
+    public void setRotationPitch(float pitch) {
+        // Limiter le pitch entre -90 et 90 degrés
+        this.rotationPitch = Math.max(-90.0f, Math.min(90.0f, pitch));
+    }
+
+    public void addRotation(float yawDelta, float pitchDelta) {
+        this.rotationYaw += yawDelta;
+        this.rotationPitch += pitchDelta;
+        // Normaliser yaw entre 0 et 360
+        this.rotationYaw = this.rotationYaw % 360.0f;
+        if (this.rotationYaw < 0) {
+            this.rotationYaw += 360.0f;
+        }
+        // Limiter le pitch
+        this.rotationPitch = Math.max(-90.0f, Math.min(90.0f, this.rotationPitch));
+    }
+
+    public float getMouseSensitivity() {
+        return this.mouseSensitivity;
+    }
+
+    public void setMouseSensitivity(float sensitivity) {
+        this.mouseSensitivity = sensitivity;
     }
 
     /**

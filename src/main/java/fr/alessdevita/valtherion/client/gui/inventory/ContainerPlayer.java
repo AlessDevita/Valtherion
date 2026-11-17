@@ -1,5 +1,6 @@
 package fr.alessdevita.valtherion.client.gui.inventory;
 
+import fr.alessdevita.valtherion.entity.player.EntityPlayer;
 import fr.alessdevita.valtherion.item.ItemStack;
 
 public class ContainerPlayer extends Container {
@@ -42,33 +43,31 @@ public class ContainerPlayer extends Container {
         this.addPlayerSlots(8, 84);
     }
 
-    @Override
     public void onCraftMatrixChanged(InventoryCrafting inventory)
     {
         this.craftResult.setInventorySlotContents(0, null);
     }
 
-    @Override
     public void onContainerClosed(Object player)
     {
         super.onContainerClosed(player);
-        for (int i = 0; i < 4; ++i)
-        {
-            ItemStack itemstack = this.craftMatrix.getStackInSlotOnClosing(i);
-            if (itemstack != null)
+        if (player instanceof EntityPlayer) {
+            for (int i = 0; i < 4; ++i)
             {
-                ((EntityPlayer) player).dropPlayerItemWithRandomChoice(itemstack, false);
+                ItemStack itemstack = this.craftMatrix.getStackInSlotOnClosing(i);
+                if (itemstack != null)
+                {
+                    ((EntityPlayer) player).dropPlayerItemWithRandomChoice(itemstack, false);
+                }
             }
         }
     }
 
-    @Override
     public boolean canInteractWith(Object player)
     {
         return true;
     }
 
-    @Override
     public ItemStack transferStackInSlot(Object player, int index)
     {
         return null;

@@ -91,7 +91,9 @@ public class EntityClientPlayerMP extends AbstractClientPlayer {
     }
 
     public void preparePlayerToSpawn() {
-        setPosition(0.0D, 0.0D, 0.0D);
+        // Positionne le joueur au-dessus du terrain par défaut
+        // La position exacte sera ajustée par createWorld() après la génération du terrain
+        setPosition(0.0D, 100.0D, 0.0D);
         setHealth(getMaxHealth());
     }
 

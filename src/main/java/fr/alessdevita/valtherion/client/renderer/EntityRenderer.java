@@ -36,6 +36,21 @@ public class EntityRenderer {
         Entity camera = this.client.renderViewEntity;
         if (camera != null) {
             org.joml.Vector3f position = camera.getPosition();
+
+            // Appliquer la rotation de la caméra (yaw et pitch)
+            if (camera instanceof fr.alessdevita.valtherion.client.entity.AbstractClientPlayer) {
+                fr.alessdevita.valtherion.client.entity.AbstractClientPlayer player = 
+                    (fr.alessdevita.valtherion.client.entity.AbstractClientPlayer) camera;
+                float yaw = player.getRotationYaw();
+                float pitch = player.getRotationPitch();
+
+                // Rotation autour de l'axe Y (yaw - rotation horizontale)
+                GL11.glRotatef(-yaw, 0.0F, 1.0F, 0.0F);
+                // Rotation autour de l'axe X (pitch - rotation verticale)
+                GL11.glRotatef(-pitch, 1.0F, 0.0F, 0.0F);
+            }
+
+            // Translation après la rotation pour déplacer la caméra
             GL11.glTranslatef(-position.x, -(position.y + 1.5F), -position.z);
         }
         GL11.glEnable(GL11.GL_DEPTH_TEST);

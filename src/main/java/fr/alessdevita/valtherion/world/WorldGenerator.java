@@ -1,6 +1,10 @@
 package fr.alessdevita.valtherion.world;
 
 import fr.alessdevita.valtherion.world.chunk.Chunk;
+import fr.alessdevita.valtherion.world.gen.ChunkProviderGenerate;
+import fr.alessdevita.valtherion.world.gen.structure.MapGenMineshaft;
+import fr.alessdevita.valtherion.world.gen.structure.MapGenVillage;
+import fr.alessdevita.valtherion.world.gen.structure.MapGenScatteredFeature;
 import fr.alessdevita.valtherion.block.BlockType;
 import fr.alessdevita.valtherion.block.Block;
 import fr.alessdevita.valtherion.world.biome.Biome;
@@ -14,6 +18,14 @@ import java.util.*;
 /**
  * Classe pour générer le monde dans Valtherion.
  * Gère la génération procédurale des chunks, des biomes, et des structures.
+ * Utilise ChunkProviderGenerate pour créer un monde aléatoire style Minecraft avec :
+ * - Terrain généré par bruit Perlin multi-octaves
+ * - Biomes variés (plaines, forêts, montagnes, déserts, neige, jungle, marais, océan)
+ * - Grottes souterraines
+ * - Minerais (charbon, fer, or, diamant)
+ * - Eau et lave
+ * - Décorations (arbres, fleurs, cactus, champignons)
+ * - Structures (villages, mines, temples)
  */
 public class WorldGenerator {
 
@@ -31,6 +43,14 @@ public class WorldGenerator {
 
     // Hauteur maximale du terrain
     private int maxHeight;
+
+    // Fournisseur de chunks pour la génération
+    private ChunkProviderGenerate chunkProvider;
+
+    // Générateurs de structures
+    private MapGenMineshaft mineshaft;
+    private MapGenVillage village;
+    private MapGenScatteredFeature scatteredFeature;
 
     // Liste des biomes disponibles
     private final Map<BiomeType, Biome> biomes;
@@ -90,11 +110,19 @@ public class WorldGenerator {
         this.seed = System.currentTimeMillis();
         this.random = new Random(seed);
         this.chunkSize = world.getChunkSize();
-        this.maxHeight = 128;
+        this.maxHeight = 256;
         this.biomes = new HashMap<>();
         this.biomeProbabilities = new HashMap<>();
         this.structures = new ArrayList<>();
-        this.structureProbability = 0.01f; // 1% de chance de générer une structure par chunk
+        this.structureProbability = 0.01f;
+
+        // Initialiser le fournisseur de chunks
+        this.chunkProvider = new ChunkProviderGenerate(world, seed);
+
+        // Initialiser les générateurs de structures
+        this.mineshaft = new MapGenMineshaft(world, seed);
+        this.village = new MapGenVillage(world, seed);
+        this.scatteredFeature = new MapGenScatteredFeature(world, seed, 0);
 
         // Initialiser les biomes par défaut
         initDefaultBiomes();
@@ -112,6 +140,10 @@ public class WorldGenerator {
         this(world);
         this.seed = seed;
         this.random = new Random(seed);
+        this.chunkProvider = new ChunkProviderGenerate(world, seed);
+        this.mineshaft = new MapGenMineshaft(world, seed);
+        this.village = new MapGenVillage(world, seed);
+        this.scatteredFeature = new MapGenScatteredFeature(world, seed, 0);
     }
 
     /**
@@ -126,7 +158,7 @@ public class WorldGenerator {
         plainsBiome.addBlock(BlockType.DIRT, 0.15f);
         plainsBiome.addBlock(BlockType.STONE, 0.05f);
         biomes.put(BiomeType.PLAINS, plainsBiome);
-        biomeProbabilities.put(BiomeType.PLAINS, 0.5f);
+        biomeProbabilities.put(BiomeType.PLAINS, 0.3f);
 
         // Biome de forêt
         Biome forestBiome = new Biome(BiomeType.FOREST, "Forêt", "Un biome de forêt.");
@@ -138,7 +170,7 @@ public class WorldGenerator {
         forestBiome.addBlock(BlockType.LEAVES, 0.05f);
         forestBiome.addBlock(BlockType.STONE, 0.05f);
         biomes.put(BiomeType.FOREST, forestBiome);
-        biomeProbabilities.put(BiomeType.FOREST, 0.3f);
+        biomeProbabilities.put(BiomeType.FOREST, 0.25f);
 
         // Biome de montagne
         Biome mountainBiome = new Biome(BiomeType.MOUNTAIN, "Montagne", "Un biome de montagne.");
@@ -158,6 +190,48 @@ public class WorldGenerator {
         desertBiome.addBlock(BlockType.STONE, 0.1f);
         biomes.put(BiomeType.DESERT, desertBiome);
         biomeProbabilities.put(BiomeType.DESERT, 0.1f);
+
+        // Biome de neige
+        Biome snowBiome = new Biome(BiomeType.SNOW, "Neige", "Un biome enneigé.");
+        snowBiome.setBaseHeight(68);
+        snowBiome.setHeightVariation(8);
+        snowBiome.addBlock(BlockType.SNOW, 0.7f);
+        snowBiome.addBlock(BlockType.ICE, 0.2f);
+        snowBiome.addBlock(BlockType.STONE, 0.1f);
+        biomes.put(BiomeType.SNOW, snowBiome);
+        biomeProbabilities.put(BiomeType.SNOW, 0.1f);
+
+        // Biome de jungle
+        Biome jungleBiome = new Biome(BiomeType.JUNGLE, "Jungle", "Un biome de jungle dense.");
+        jungleBiome.setBaseHeight(72);
+        jungleBiome.setHeightVariation(12);
+        jungleBiome.addBlock(BlockType.GRASS, 0.5f);
+        jungleBiome.addBlock(BlockType.WOOD, 0.2f);
+        jungleBiome.addBlock(BlockType.LEAVES, 0.2f);
+        jungleBiome.addBlock(BlockType.VINE, 0.1f);
+        biomes.put(BiomeType.JUNGLE, jungleBiome);
+        biomeProbabilities.put(BiomeType.JUNGLE, 0.05f);
+
+        // Biome de marais
+        Biome swampBiome = new Biome(BiomeType.SWAMP, "Marais", "Un biome humide et marécageux.");
+        swampBiome.setBaseHeight(62);
+        swampBiome.setHeightVariation(2);
+        swampBiome.addBlock(BlockType.GRASS, 0.4f);
+        swampBiome.addBlock(BlockType.WATER, 0.3f);
+        swampBiome.addBlock(BlockType.DIRT, 0.2f);
+        swampBiome.addBlock(BlockType.MUSHROOM, 0.1f);
+        biomes.put(BiomeType.SWAMP, swampBiome);
+        biomeProbabilities.put(BiomeType.SWAMP, 0.05f);
+
+        // Biome d'océan
+        Biome oceanBiome = new Biome(BiomeType.OCEAN, "Océan", "Un biome aquatique profond.");
+        oceanBiome.setBaseHeight(50);
+        oceanBiome.setHeightVariation(5);
+        oceanBiome.addBlock(BlockType.SAND, 0.3f);
+        oceanBiome.addBlock(BlockType.WATER, 0.6f);
+        oceanBiome.addBlock(BlockType.GRAVEL, 0.1f);
+        biomes.put(BiomeType.OCEAN, oceanBiome);
+        biomeProbabilities.put(BiomeType.OCEAN, 0.05f);
     }
 
     /**
@@ -175,42 +249,11 @@ public class WorldGenerator {
         // Feuilles de l'arbre
         for (int x = 0; x < 3; x++) {
             for (int z = 0; z < 3; z++) {
-                if (x == 1 && z == 1) {
-                    treeStructure[x][4][z] = BlockType.LEAVES;
-                } else {
-                    treeStructure[x][4][z] = BlockType.LEAVES;
-                }
+                treeStructure[x][4][z] = BlockType.LEAVES;
             }
         }
 
         structures.add(new Structure("Arbre", treeStructure));
-
-        // Structure : Maison
-        BlockType[][][] houseStructure = new BlockType[5][4][5];
-
-        // Murs de la maison
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                if (x == 0 || x == 4 || z == 0 || z == 4) {
-                    for (int y = 0; y < 3; y++) {
-                        houseStructure[x][y][z] = BlockType.WOOD;
-                    }
-                }
-            }
-        }
-
-        // Toit de la maison
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                if (x == 0 || x == 4 || z == 0 || z == 4) {
-                    houseStructure[x][3][z] = BlockType.WOOD;
-                } else {
-                    houseStructure[x][3][z] = BlockType.WOOD;
-                }
-            }
-        }
-
-        structures.add(new Structure("Maison", houseStructure));
     }
 
     /**
@@ -219,10 +262,7 @@ public class WorldGenerator {
     public void generateInitialWorld() {
         generateInitialChunks(5);
 
-        // Générer le joueur initial
-        generateInitialPlayer();
-
-        System.out.println("Monde initial généré.");
+        System.out.println("Monde initial généré avec la graine : " + seed);
     }
 
     /**
@@ -232,15 +272,19 @@ public class WorldGenerator {
         if (renderDistance < 0) {
             throw new IllegalArgumentException("La distance de génération ne peut pas être négative");
         }
+        System.out.println("Génération du monde... (" + (renderDistance * 2 + 1) + "x" + (renderDistance * 2 + 1) + " chunks)");
+
         for (int x = -renderDistance; x <= renderDistance; x++) {
             for (int z = -renderDistance; z <= renderDistance; z++) {
                 generateChunk(x, z);
             }
         }
+
+        System.out.println("Génération du monde terminée.");
     }
 
     /**
-     * Génère un chunk.
+     * Génère un chunk en utilisant ChunkProviderGenerate.
      * @param chunkX Coordonnée X du chunk.
      * @param chunkZ Coordonnée Z du chunk.
      */
@@ -250,174 +294,31 @@ public class WorldGenerator {
             return; // Le chunk existe déjà
         }
 
-        // Créer un nouveau chunk
-        chunk = new Chunk(chunkX, chunkZ, chunkSize);
-
-        // Générer le terrain pour le chunk
-        generateTerrain(chunk);
+        // Utiliser ChunkProviderGenerate pour générer le chunk
+        chunk = chunkProvider.generateChunk(chunkX, chunkZ);
 
         // Générer les structures pour le chunk
-        generateStructures(chunk);
+        generateStructures(chunk, chunkX, chunkZ);
 
         // Ajouter le chunk au monde
         world.addChunk(chunk);
     }
 
     /**
-     * Génère le terrain pour un chunk.
-     * @param chunk Chunk à générer.
-     */
-    private void generateTerrain(Chunk chunk) {
-        int chunkX = chunk.getX();
-        int chunkZ = chunk.getZ();
-
-        // Déterminer le biome pour ce chunk
-        Biome biome = getBiome(chunkX, chunkZ);
-
-        // Générer le terrain en fonction du biome
-        for (int x = 0; x < chunkSize; x++) {
-            for (int z = 0; z < chunkSize; z++) {
-                int worldX = chunkX * chunkSize + x;
-                int worldZ = chunkZ * chunkSize + z;
-
-                // Générer la hauteur du terrain
-                int height = generateHeight(worldX, worldZ, biome);
-
-                // Générer les blocs pour cette colonne
-                for (int y = 0; y < maxHeight; y++) {
-                    if (y < height) {
-                        BlockType blockType = biome.getRandomBlock(random);
-                        chunk.setBlock(x, y, z, new Block(blockType) {
-                            @Override
-                            public void update(float deltaTime) {
-
-                            }
-                        });
-                    } else if (y == height) {
-                        // Bloc de surface (ex: herbe, sable)
-                        BlockType surfaceBlock = biome.getSurfaceBlock();
-                        chunk.setBlock(x, y, z, new Block(surfaceBlock) {
-                            @Override
-                            public void update(float deltaTime) {
-
-                            }
-                        });
-                    } else {
-                        // Air
-                        chunk.setBlock(x, y, z, new Block(BlockType.AIR) {
-                            @Override
-                            public void update(float deltaTime) {
-
-                            }
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Génère la hauteur du terrain pour une position donnée.
-     * @param x Coordonnée X.
-     * @param z Coordonnée Z.
-     * @param biome Biome pour cette position.
-     * @return Hauteur du terrain.
-     */
-    private int generateHeight(int x, int z, Biome biome) {
-        // Utiliser le bruit de Perlin pour générer la hauteur
-        float noise = generatePerlinNoise(x * 0.1f, z * 0.1f);
-
-        // Calculer la hauteur en fonction du biome et du bruit
-        int baseHeight = biome.getBaseHeight();
-        int heightVariation = (int) biome.getHeightVariation();
-
-        return baseHeight + (int) (noise * heightVariation);
-    }
-
-    /**
-     * Génère un bruit de Perlin pour une position donnée.
-     * @param x Coordonnée X.
-     * @param z Coordonnée Z.
-     * @return Valeur du bruit de Perlin.
-     */
-    private float generatePerlinNoise(float x, float z) {
-        int x0 = (int) Math.floor(x);
-        int z0 = (int) Math.floor(z);
-        float localX = x - x0;
-        float localZ = z - z0;
-        localX = localX * localX * (3f - 2f * localX);
-        localZ = localZ * localZ * (3f - 2f * localZ);
-
-        float top = lerp(noiseAt(x0, z0), noiseAt(x0 + 1, z0), localX);
-        float bottom = lerp(noiseAt(x0, z0 + 1), noiseAt(x0 + 1, z0 + 1), localX);
-        return lerp(top, bottom, localZ);
-    }
-
-    private float noiseAt(int x, int z) {
-        long hash = seed ^ (long) x * 0x9E3779B97F4A7C15L ^ (long) z * 0xC2B2AE3D27D4EB4FL;
-        hash ^= hash >>> 30;
-        hash *= 0xBF58476D1CE4E5B9L;
-        hash ^= hash >>> 27;
-        hash *= 0x94D049BB133111EBL;
-        hash ^= hash >>> 31;
-        return ((hash >>> 40) / (float) 0xFFFFFF) * 2f - 1f;
-    }
-
-    private float lerp(float start, float end, float amount) {
-        return start + (end - start) * amount;
-    }
-
-    /**
      * Génère les structures pour un chunk.
      * @param chunk Chunk à générer.
+     * @param chunkX Coordonnée X du chunk.
+     * @param chunkZ Coordonnée Z du chunk.
      */
-    private void generateStructures(Chunk chunk) {
-        if (random.nextFloat() > structureProbability) {
-            return; // Pas de structure pour ce chunk
-        }
+    private void generateStructures(Chunk chunk, int chunkX, int chunkZ) {
+        // Générer les mines souterraines
+        mineshaft.generate(chunkX, chunkZ);
 
-        // Choisir une structure aléatoire
-        Structure structure = structures.get(random.nextInt(structures.size()));
+        // Générer les villages
+        village.generate(chunkX, chunkZ);
 
-        // Choisir une position aléatoire dans le chunk
-        int x = random.nextInt(chunkSize - structure.getWidth());
-        int z = random.nextInt(chunkSize - structure.getDepth());
-
-        // Générer la structure
-        generateStructure(chunk, structure, x, 0, z);
-    }
-
-    /**
-     * Génère une structure dans un chunk.
-     * @param chunk Chunk où générer la structure.
-     * @param structure Structure à générer.
-     * @param x Coordonnée X de la structure.
-     * @param y Coordonnée Y de la structure.
-     * @param z Coordonnée Z de la structure.
-     */
-    private void generateStructure(Chunk chunk, Structure structure, int x, int y, int z) {
-        BlockType[][][] blocks = structure.getBlocks();
-
-        for (int structureX = 0; structureX < structure.getWidth(); structureX++) {
-            for (int structureY = 0; structureY < structure.getHeight(); structureY++) {
-                for (int structureZ = 0; structureZ < structure.getDepth(); structureZ++) {
-                    BlockType blockType = blocks[structureX][structureY][structureZ];
-                    if (blockType != null) {
-                        chunk.setBlock(
-                                x + structureX,
-                                y + structureY,
-                                z + structureZ,
-                                new Block(blockType) {
-                                    @Override
-                                    public void update(float deltaTime) {
-
-                                    }
-                                }
-                        );
-                    }
-                }
-            }
-        }
+        // Générer les structures dispersées (temples, ruines)
+        scatteredFeature.generate(chunkX, chunkZ);
     }
 
     /**
@@ -429,8 +330,14 @@ public class WorldGenerator {
         int spawnY = 64;
         int spawnZ = 0;
 
-        // Vérifier si la position de spawn est valide
-        while (world.isBlockSolid(spawnX, spawnY, spawnZ)) {
+        // Monter jusqu'à trouver un endroit libre
+        while (spawnY < 200) {
+            if (!world.isBlockSolid(spawnX, spawnY, spawnZ)) {
+                // Vérifier que le bloc en dessous est solide
+                if (world.isBlockSolid(spawnX, spawnY - 1, spawnZ)) {
+                    break;
+                }
+            }
             spawnY++;
         }
 
@@ -448,6 +355,10 @@ public class WorldGenerator {
      * @return Biome pour cette position.
      */
     public Biome getBiome(int x, int z) {
+        // Utiliser un hash déterministe basé sur la position
+        long hash = seed ^ ((long)x * 0x9E3779B97F4A7C15L) ^ ((long)z * 0xC2B2AE3D27D4EB4FL);
+        Random biomeRandom = new Random(hash);
+
         // Calculer les probabilités cumulées
         float totalProbability = 0.0f;
         for (Float probability : biomeProbabilities.values()) {
@@ -455,7 +366,7 @@ public class WorldGenerator {
         }
 
         // Choisir un biome en fonction des probabilités
-        float randomValue = random.nextFloat() * totalProbability;
+        float randomValue = biomeRandom.nextFloat() * totalProbability;
         float cumulativeProbability = 0.0f;
 
         for (Map.Entry<BiomeType, Float> entry : biomeProbabilities.entrySet()) {
@@ -511,6 +422,7 @@ public class WorldGenerator {
     public void setSeed(long seed) {
         this.seed = seed;
         this.random = new Random(seed);
+        this.chunkProvider = new ChunkProviderGenerate(world, seed);
     }
 
     public Random getRandom() {
@@ -551,5 +463,9 @@ public class WorldGenerator {
 
     public void setStructureProbability(float structureProbability) {
         this.structureProbability = structureProbability;
+    }
+
+    public ChunkProviderGenerate getChunkProvider() {
+        return chunkProvider;
     }
 }

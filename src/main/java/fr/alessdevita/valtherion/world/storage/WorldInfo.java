@@ -5,6 +5,8 @@ import fr.alessdevita.valtherion.world.WorldSettings;
 public class WorldInfo {
     private String worldName;
     private long seed;
+    private String gameMode;
+    private long lastPlayed;
 
     public WorldInfo() {
         this("World", 0L);
@@ -17,6 +19,8 @@ public class WorldInfo {
     public WorldInfo(String worldName, long seed) {
         this.worldName = worldName == null || worldName.trim().isEmpty() ? "World" : worldName.trim();
         this.seed = seed;
+        this.gameMode = "Survie";
+        this.lastPlayed = System.currentTimeMillis();
     }
 
     public String getWorldName() {
@@ -35,5 +39,21 @@ public class WorldInfo {
 
     public void setSeed(long seed) {
         this.seed = seed;
+    }
+
+    public String getGameMode() {
+        return this.gameMode;
+    }
+
+    public void setGameMode(String gameMode) {
+        this.gameMode = gameMode;
+    }
+
+    public long getLastPlayed() {
+        return this.lastPlayed;
+    }
+
+    public void setLastPlayed(long lastPlayed) {
+        this.lastPlayed = lastPlayed;
     }
 }

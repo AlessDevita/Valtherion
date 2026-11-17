@@ -725,7 +725,9 @@ public class Valtherion implements IPlayerUsage {
             }
             else
             {
-                this.setIngameFocus();
+                this.inGameHasFocus = true;
+                this.mouseHelper.grabMouseCursor();
+                this.skipRenderWorld = false;
             }
         }
     }
@@ -743,6 +745,103 @@ public class Valtherion implements IPlayerUsage {
             logger.error("@ " + spot);
             logger.error("GL error code: " + i);
         }
+    }
+
+    /**
+     * Met à jour le mouvement du joueur en fonction des touches pressées.
+     */
+    private void updatePlayerMovement()
+    {
+        if (this.thePlayer == null || this.gameSettings == null)
+        {
+            return;
+        }
+
+        float deltaTime = 1.0F / 20.0F;
+        org.joml.Vector3f direction = new org.joml.Vector3f();
+
+        // Avancer / Reculer
+        if (this.gameSettings.keyBindForward.getIsKeyPressed())
+        {
+            direction.z -= 1.0F;
+        }
+        if (this.gameSettings.keyBindBack.getIsKeyPressed())
+        {
+            direction.z += 1.0F;
+        }
+
+        // Gauche / Droite
+        if (this.gameSettings.keyBindLeft.getIsKeyPressed())
+        {
+            direction.x -= 1.0F;
+        }
+        if (this.gameSettings.keyBindRight.getIsKeyPressed())
+        {
+            direction.x += 1.0F;
+        }
+
+        // Saut
+        if (this.gameSettings.keyBindJump.getIsKeyPressed())
+        {
+            this.thePlayer.jump();
+        }
+
+        // Sprint
+        this.thePlayer.setSprinting(this.gameSettings.keyBindSneak.getIsKeyPressed());
+
+        // Gestion de la souris pour la rotation de la caméra
+        if (this.inGameHasFocus)
+        {
+            double[] cursorX = new double[1];
+            double[] cursorY = new double[1];
+            glfwGetCursorPos(this.window, cursorX, cursorY);
+
+            // Calculer le centre de l'écran
+            int centerX = this.displayWidth / 2;
+            int centerY = this.displayHeight / 2;
+
+            // Calculer le déplacement de la souris depuis le centre
+            float deltaX = (float)(cursorX[0] - centerX);
+            float deltaY = (float)(cursorY[0] - centerY);
+
+            // Appliquer la rotation
+            if (deltaX != 0 || deltaY != 0)
+            {
+                float sensitivity = this.thePlayer.getMouseSensitivity();
+                this.thePlayer.addRotation(-deltaX * sensitivity, -deltaY * sensitivity);
+
+                // Recentrer la souris au centre pour éviter qu'elle ne sorte de l'écran
+                glfwSetCursorPos(this.window, centerX, centerY);
+            }
+        }
+
+        // Si une touche de mouvement est pressée, déplacer le joueur
+        if (direction.x != 0.0F || direction.z != 0.0F)
+        {
+            // Normaliser la direction pour éviter que la diagonale soit plus rapide
+            float length = (float) Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+            if (length > 0.0F)
+            {
+                direction.x /= length;
+                direction.z /= length;
+            }
+
+            // Appliquer la rotation du joueur à la direction
+            float yaw = this.thePlayer.getRotationYaw();
+            float sin = (float) Math.sin(Math.toRadians(yaw));
+            float cos = (float) Math.cos(Math.toRadians(yaw));
+
+            float rotatedX = direction.x * cos - direction.z * sin;
+            float rotatedZ = direction.x * sin + direction.z * cos;
+
+            direction.x = rotatedX;
+            direction.z = rotatedZ;
+
+            this.thePlayer.move(direction, deltaTime);
+        }
+
+        // Mettre à jour le joueur (gravité, collisions, etc.)
+        this.thePlayer.update(deltaTime);
     }
 
     /**
@@ -875,6 +974,12 @@ public class Valtherion implements IPlayerUsage {
 
         // Traiter les événements souris/clavier et les propager aux GUI
         this.runTick();
+
+        // Mettre à jour le mouvement du joueur à partir des touches clavier
+        if (!this.isGamePaused && this.thePlayer != null && this.theWorld != null && this.currentScreen == null)
+        {
+            this.updatePlayerMovement();
+        }
 
         if (this.isGamePaused && this.theWorld != null)
         {
@@ -1103,7 +1208,8 @@ public class Valtherion implements IPlayerUsage {
             {
                 this.inGameHasFocus = true;
                 this.mouseHelper.grabMouseCursor();
-                this.displayGuiScreen((Gui) null);
+                this.currentScreen = null;
+                this.skipRenderWorld = false;
                 this.leftClickCounter = 10000;
             }
         }
@@ -1582,18 +1688,18 @@ public class Valtherion implements IPlayerUsage {
                 }
             }
 
-            while (this.gameSettings.keyBindInventory.isPressed())
+            if (this.gameSettings.keyBindInventory.isPressed())
             {
                 this.getNetHandler().addToSendQueue(new C16PacketClientStatus(C16PacketClientStatus.EnumState.OPEN_INVENTORY_ACHIEVEMENT));
                 // TODO: displayGuiScreen(new GuiInventory(this.thePlayer))
             }
 
-            while (this.gameSettings.keyBindDrop.isPressed())
+            if (this.gameSettings.keyBindDrop.isPressed())
             {
                 this.thePlayer.dropOneItem(false);
             }
 
-            while (this.gameSettings.keyBindChat.isPressed())
+            if (this.gameSettings.keyBindChat.isPressed())
             {
                 // TODO: displayGuiScreen(new GuiChat())
             }
@@ -1612,17 +1718,17 @@ public class Valtherion implements IPlayerUsage {
             }
             else
             {
-                while (this.gameSettings.keyBindAttack.isPressed())
+                if (this.gameSettings.keyBindAttack.isPressed())
                 {
                     this.clickMouse();
                 }
 
-                while (this.gameSettings.keyBindUseItem.isPressed())
+                if (this.gameSettings.keyBindUseItem.isPressed())
                 {
                     this.rightClickMouse();
                 }
 
-                while (this.gameSettings.keyBindPickBlock.isPressed())
+                if (this.gameSettings.keyBindPickBlock.isPressed())
                 {
                     this.pickerBlock();
                 }
@@ -2056,6 +2162,7 @@ public class Valtherion implements IPlayerUsage {
         world.setWorldGenerator(generator);
         generator.generateInitialChunks(2);
 
+        this.playerController = new PlayerControllerMP(this);
         this.loadWorld(world);
 
         int spawnY = generator.getMaxHeight() - 1;
